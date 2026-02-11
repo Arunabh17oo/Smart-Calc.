@@ -422,6 +422,12 @@ textarea {
   transition: transform 180ms ease, border-color 180ms ease;
 }
 
+.market-stock-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
 .market-stock-card:hover {
   transform: translateY(-2px);
   border-color: rgba(196, 241, 255, 0.6);
@@ -509,6 +515,14 @@ textarea {
 
 .market-stock-change-flat {
   color: #d8f2ff;
+}
+
+.market-stock-cta {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: #8befff;
+  letter-spacing: 0.02em;
+  font-weight: 600;
 }
 
 .market-crypto-grid {

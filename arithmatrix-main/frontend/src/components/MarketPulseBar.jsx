@@ -67,6 +67,10 @@ function formatUpdatedTime(value) {
   }
 }
 
+function getStockGrowwUrl(stock) {
+  return 'https://groww.in';
+}
+
 export function MarketPulseBar() {
   const [market, setMarket] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -216,7 +220,15 @@ export function MarketPulseBar() {
                     : 'market-stock-change-flat';
 
               return (
-                <article className="market-stock-card" role="listitem" key={stock.symbol}>
+                <a
+                  className="market-stock-card market-stock-link"
+                  role="listitem"
+                  key={stock.symbol}
+                  href={getStockGrowwUrl(stock)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  aria-label={`Open Groww home page from ${stock.symbol}`}
+                >
                   <div className="market-stock-brand">
                     <div className="market-stock-logo-wrap">
                       {!hasLogoFailure ? (
@@ -247,7 +259,8 @@ export function MarketPulseBar() {
 
                   <p className="market-stock-price">{priceText}</p>
                   <p className={`market-stock-change ${changeClass}`}>{formatPercent(stock.changePercent)}</p>
-                </article>
+                  <p className="market-stock-cta">Open Groww Home ↗</p>
+                </a>
               );
             })}
           </div>

@@ -42,6 +42,10 @@ function computeChangePercent(price, previousClose) {
   return ((parsedPrice - parsedPrevious) / parsedPrevious) * 100;
 }
 
+function getGrowwUrl(symbol) {
+  return `https://groww.in/us-stocks/${String(symbol || '').toLowerCase()}`;
+}
+
 async function fetchStockQuoteMap() {
   const symbols = STOCK_WATCHLIST.map((stock) => stock.symbol).join(',');
   const params = new URLSearchParams({ symbols });
@@ -122,6 +126,7 @@ async function fetchStocks() {
       name: quote?.shortName || quote?.longName || stock.name,
       emoji: stock.emoji,
       logoUrl: `https://logo.clearbit.com/${stock.logoDomain}`,
+      growwUrl: getGrowwUrl(stock.symbol),
       currency: quote?.currency || 'USD',
       marketTime: quote?.regularMarketTime
         ? new Date(Number(quote.regularMarketTime) * 1000).toISOString()
