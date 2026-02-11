@@ -157,33 +157,6 @@ Provides persistent local storage for calculation history.
 - Accessibility improvements (voice-first mode)
 
 ---
-
-## 🤝 Contributors
-
-### 👨‍💻 Parth
-
-- Android Development
-- App Architecture & Core Logic
-- Calculator engine & expression evaluator
-- Room database & history system
-- Overall system design
-
-🔗 GitHub: https://github.com/ParthCh300x
-
----
-
-### 👨‍💻 Shravan Bire
-
-- Android Development
-- UI & feature contributions
-- UI refinement and interaction design
-- Feature ideation and implementation support
-- Architectural discussions and improvements
-
-🔗 GitHub: https://github.com/shravanBire
-
----
-
 ## 🧠 Why This Project Matters
 
 ArithMatrix demonstrates:
