@@ -1,108 +1,51 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { fetchNewsFeed } from '../api/newsApi.js';
 
-const TECH_STORIES = [
-  {
-    id: 'edge-ai-assistants',
-    title: 'Edge AI assistants are shifting to fully offline reasoning',
-    category: 'AI',
-    summary:
-      'New assistant chips are processing language and vision tasks on-device, reducing latency and privacy risk for mobile and laptop users.',
-    stage: 'Pilot Rollout',
-    eta: 'Q2 2026',
-    momentum: 96,
-    freshness: '2h ago',
-    readTime: '5 min read'
+const TOPIC_FALLBACK = {
+  'upcoming-tech': {
+    kicker: 'Innovation Radar',
+    title: 'Upcoming Technologies News',
+    subtitle: 'Live updates on AI, robotics, semiconductors, and next-generation innovation.'
   },
-  {
-    id: 'solid-state-battery-lines',
-    title: 'Solid-state battery production lines enter pre-commercial scale',
-    category: 'Energy',
-    summary:
-      'Manufacturers are reporting better safety and fast-charge cycles, signaling a major step toward next-gen EV range and durability.',
-    stage: 'Pre-Commercial',
-    eta: 'Q4 2026',
-    momentum: 92,
-    freshness: '5h ago',
-    readTime: '4 min read'
+  voice: {
+    kicker: 'Voice + Devices',
+    title: 'Mobile Phones & Electronics News',
+    subtitle: 'Recent updates about smartphones, wearables, and consumer electronics.'
   },
-  {
-    id: 'humanoid-factory-robots',
-    title: 'Humanoid robots begin repetitive industrial deployments',
-    category: 'Robotics',
-    summary:
-      'Factories are testing humanoid units for inspection, packing, and material transfer in low-light, high-precision workflows.',
-    stage: 'Field Trials',
-    eta: 'Q3 2026',
-    momentum: 90,
-    freshness: '8h ago',
-    readTime: '6 min read'
+  camera: {
+    kicker: 'Vision Tech',
+    title: 'Latest Camera News',
+    subtitle: 'Fresh news about cameras, imaging sensors, and photography hardware.'
   },
-  {
-    id: 'quantum-error-correction',
-    title: 'Quantum error-correction milestones improve hardware stability',
-    category: 'Quantum',
-    summary:
-      'Research teams reported better logical qubit lifetimes, moving practical quantum workloads closer to enterprise experimentation.',
-    stage: 'Research Breakthrough',
-    eta: 'Q1 2027',
-    momentum: 88,
-    freshness: '11h ago',
-    readTime: '7 min read'
+  currency: {
+    kicker: 'Money Watch',
+    title: 'Latest Currency Market News',
+    subtitle: 'Recent updates on forex, rupee-dollar movement, and global currency trends.'
   },
-  {
-    id: 'xr-workspaces',
-    title: 'Spatial XR workspaces gain traction in engineering teams',
-    category: 'AR/VR',
-    summary:
-      'Mixed-reality collaboration tools are improving 3D prototyping and remote design reviews for product and architecture teams.',
-    stage: 'Growth Phase',
-    eta: 'Q2 2026',
-    momentum: 85,
-    freshness: '15h ago',
-    readTime: '4 min read'
+  weather: {
+    kicker: 'Climate Alerts',
+    title: 'Latest Weather Event News',
+    subtitle: 'Recent events caused by weather, including storms, floods, heatwaves, and wildfires.'
   },
-  {
-    id: 'cybersecurity-ai-analysts',
-    title: 'Autonomous AI SOC analysts reduce security triage times',
-    category: 'Cybersecurity',
-    summary:
-      'Security operations centers are adopting agentic pipelines that prioritize incidents and automate repetitive threat analysis tasks.',
-    stage: 'Enterprise Adoption',
-    eta: 'Now - 2026',
-    momentum: 89,
-    freshness: '20h ago',
-    readTime: '5 min read'
+  history: {
+    kicker: 'Global Roundup',
+    title: 'Overall World News',
+    subtitle: 'A broad world news stream across current affairs, economy, science, and technology.'
   },
-  {
-    id: 'chiplet-datacenter-architectures',
-    title: 'Chiplet-based server designs expand AI compute efficiency',
-    category: 'Semiconductors',
-    summary:
-      'Modular chiplet architectures are lowering thermal overhead and increasing performance-per-watt for large AI workloads.',
-    stage: 'Scaled Manufacturing',
-    eta: 'Q3 2026',
-    momentum: 91,
-    freshness: '1d ago',
-    readTime: '6 min read'
-  },
-  {
-    id: 'satellite-direct-cell',
-    title: 'Satellite-to-phone connectivity reaches broader consumer trials',
-    category: 'Space Tech',
-    summary:
-      'Direct-to-cell satellite layers are being tested as fallback coverage for emergency and rural communication use cases.',
-    stage: 'Carrier Partnerships',
-    eta: 'Q1 2027',
-    momentum: 84,
-    freshness: '1d ago',
-    readTime: '4 min read'
+  assistant: {
+    kicker: 'AI Assistant Watch',
+    title: 'Latest AI Assistant News',
+    subtitle: 'Recent updates in AI assistants, automation, and productivity tools.'
   }
-];
+};
 
-const NEWS_CATEGORIES = ['All', ...new Set(TECH_STORIES.map((story) => story.category))];
+function normalizeTopicKey(topic) {
+  const key = String(topic || '').trim().toLowerCase();
+  return TOPIC_FALLBACK[key] ? key : 'upcoming-tech';
+}
 
 function toSearchableText(story) {
-  return `${story.title} ${story.summary} ${story.category} ${story.stage}`.toLowerCase();
+  return `${story.title} ${story.summary} ${story.category} ${story.stage} ${story.source}`.toLowerCase();
 }
 
 function getMomentumLabel(value) {
@@ -112,20 +55,119 @@ function getMomentumLabel(value) {
   return 'Emerging';
 }
 
-export function TechNewsSection() {
+function formatTimestamp(value) {
+  if (!value) return 'N/A';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
+function formatNextRefresh(nowTick, timestamp) {
+  if (!timestamp) return 'in ~2h';
+  const target = new Date(timestamp).getTime();
+  if (!Number.isFinite(target)) return 'in ~2h';
+
+  const deltaSec = Math.max(0, Math.floor((target - nowTick) / 1000));
+  const hours = Math.floor(deltaSec / 3600);
+  const mins = Math.floor((deltaSec % 3600) / 60);
+
+  if (hours <= 0) return `in ${Math.max(1, mins)}m`;
+  return `in ${hours}h ${mins}m`;
+}
+
+function openStory(url) {
+  if (!url) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+export function TechNewsSection({ topic = 'upcoming-tech' }) {
+  const topicKey = normalizeTopicKey(topic);
+  const fallbackCopy = TOPIC_FALLBACK[topicKey];
+
   const [activeCategory, setActiveCategory] = useState('All');
   const [query, setQuery] = useState('');
-  const [selectedStoryId, setSelectedStoryId] = useState(TECH_STORIES[0].id);
+  const [selectedStoryId, setSelectedStoryId] = useState('');
+  const [feed, setFeed] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  const loadNews = useCallback(
+    async ({ forceRefresh = false, silent = false } = {}) => {
+      if (!silent) setLoading(true);
+      if (silent) setRefreshing(true);
+      setError('');
+
+      try {
+        const data = await fetchNewsFeed(topicKey, { forceRefresh });
+        setFeed(data);
+        setSelectedStoryId((prev) =>
+          prev && data?.stories?.some((story) => story.id === prev) ? prev : data?.stories?.[0]?.id || ''
+        );
+      } catch (err) {
+        setError(err.message || 'Could not load live news feed');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [topicKey]
+  );
+
+  useEffect(() => {
+    setActiveCategory('All');
+    setQuery('');
+    setSelectedStoryId('');
+    loadNews();
+  }, [topicKey, loadNews]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNowTick(Date.now());
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const refreshSec = Number(feed?.refreshIntervalSec);
+    if (!Number.isFinite(refreshSec) || refreshSec <= 0) return undefined;
+
+    const interval = window.setInterval(() => {
+      loadNews({ silent: true });
+    }, refreshSec * 1000);
+
+    return () => window.clearInterval(interval);
+  }, [feed?.refreshIntervalSec, loadNews]);
+
+  const stories = useMemo(() => feed?.stories || [], [feed?.stories]);
+  const categories = useMemo(() => {
+    return ['All', ...new Set(stories.map((story) => story.category).filter(Boolean))];
+  }, [stories]);
+
+  useEffect(() => {
+    if (!categories.includes(activeCategory)) {
+      setActiveCategory('All');
+    }
+  }, [activeCategory, categories]);
 
   const filteredStories = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return TECH_STORIES.filter((story) => {
-      const inCategory = activeCategory === 'All' || story.category === activeCategory;
-      const matchesQuery = !normalizedQuery || toSearchableText(story).includes(normalizedQuery);
-      return inCategory && matchesQuery;
-    }).sort((a, b) => b.momentum - a.momentum);
-  }, [activeCategory, query]);
+    return stories
+      .filter((story) => {
+        const inCategory = activeCategory === 'All' || story.category === activeCategory;
+        const matchesQuery = !normalizedQuery || toSearchableText(story).includes(normalizedQuery);
+        return inCategory && matchesQuery;
+      })
+      .sort((a, b) => b.momentum - a.momentum);
+  }, [stories, activeCategory, query]);
 
   const featuredStory = useMemo(() => {
     return filteredStories.find((story) => story.id === selectedStoryId) || filteredStories[0] || null;
@@ -133,7 +175,7 @@ export function TechNewsSection() {
 
   const averageMomentum = useMemo(() => {
     if (!filteredStories.length) return 0;
-    const total = filteredStories.reduce((sum, story) => sum + story.momentum, 0);
+    const total = filteredStories.reduce((sum, story) => sum + Number(story.momentum || 0), 0);
     return Math.round(total / filteredStories.length);
   }, [filteredStories]);
 
@@ -143,6 +185,9 @@ export function TechNewsSection() {
   }, [filteredStories, featuredStory]);
 
   const storyCountLabel = filteredStories.length === 1 ? 'story' : 'stories';
+  const sectionKicker = feed?.kicker || fallbackCopy.kicker;
+  const sectionTitle = feed?.title || fallbackCopy.title;
+  const sectionSubtitle = feed?.subtitle || fallbackCopy.subtitle;
 
   function handleCardPointerMove(event) {
     if (typeof window !== 'undefined' && window.matchMedia?.('(hover: none)').matches) return;
@@ -170,12 +215,9 @@ export function TechNewsSection() {
     <section className="tech-news-panel" aria-labelledby="tech-news-title">
       <div className="tech-news-head">
         <div>
-          <p className="tech-news-kicker">Innovation Radar</p>
-          <h2 id="tech-news-title">Upcoming Technologies News</h2>
-          <p className="tech-news-subtitle">
-            Track high-impact technology updates across AI, robotics, chips, cyber, XR, energy,
-            and space systems.
-          </p>
+          <p className="tech-news-kicker">{sectionKicker}</p>
+          <h2 id="tech-news-title">{sectionTitle}</h2>
+          <p className="tech-news-subtitle">{sectionSubtitle}</p>
         </div>
 
         <div className="tech-orbit" aria-hidden="true">
@@ -188,7 +230,7 @@ export function TechNewsSection() {
 
       <div className="tech-toolbar">
         <div className="tech-category-row">
-          {NEWS_CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <button
               key={category}
               type="button"
@@ -200,13 +242,13 @@ export function TechNewsSection() {
           ))}
         </div>
 
-        <label className="tech-search-wrap" htmlFor="tech-news-search">
+        <label className="tech-search-wrap" htmlFor={`tech-news-search-${topicKey}`}>
           <span className="tech-search-label">Search news</span>
           <input
-            id="tech-news-search"
+            id={`tech-news-search-${topicKey}`}
             type="search"
             className="text-input tech-search-input"
-            placeholder="Search AI, robotics, quantum, chips..."
+            placeholder="Search current updates..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -214,15 +256,30 @@ export function TechNewsSection() {
       </div>
 
       <div className="tech-feed-strip" aria-live="polite">
-        <span className="tech-feed-pulse" aria-hidden="true" />
-        <span>
-          {filteredStories.length} {storyCountLabel} in focus
-        </span>
-        <span className="tech-feed-divider" aria-hidden="true">
-          |
-        </span>
-        <span>Avg momentum: {averageMomentum || 0}%</span>
+        <div className="tech-feed-items">
+          <span className="tech-feed-item">
+            <span className="tech-feed-pulse" aria-hidden="true" />
+            <span>
+              {filteredStories.length} {storyCountLabel} in focus
+            </span>
+          </span>
+          <span className="tech-feed-item">Avg momentum: {averageMomentum || 0}%</span>
+          <span className="tech-feed-item">Updated: {formatTimestamp(feed?.updatedAt)}</span>
+          <span className="tech-feed-item">Next refresh: {formatNextRefresh(nowTick, feed?.nextRefreshAt)}</span>
+        </div>
+        <button
+          type="button"
+          className="ghost-btn tech-refresh-btn"
+          onClick={() => loadNews({ forceRefresh: true, silent: true })}
+          disabled={loading || refreshing}
+        >
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
+
+      {error ? <p className="error-text">{error}</p> : null}
+      {feed?.warnings?.[0] ? <p className="hint-text tech-feed-warning">{feed.warnings[0]}</p> : null}
+      {loading && !stories.length ? <p className="hint-text">Loading latest news...</p> : null}
 
       <div className="tech-news-layout">
         {featuredStory ? (
@@ -233,8 +290,8 @@ export function TechNewsSection() {
 
             <div className="tech-feature-meta">
               <span>{featuredStory.category}</span>
-              <span>{featuredStory.stage}</span>
-              <span>{featuredStory.eta}</span>
+              <span>{featuredStory.source}</span>
+              <span>{featuredStory.freshness}</span>
             </div>
 
             <div className="tech-momentum">
@@ -247,10 +304,18 @@ export function TechNewsSection() {
               </div>
               <p className="tech-momentum-note">{getMomentumLabel(featuredStory.momentum)} market traction</p>
             </div>
+
+            {featuredStory.url ? (
+              <div className="button-row tech-feature-actions">
+                <button type="button" className="ghost-btn" onClick={() => openStory(featuredStory.url)}>
+                  Open Source
+                </button>
+              </div>
+            ) : null}
           </article>
         ) : (
           <div className="tech-empty-state">
-            No technology updates match your current category and search query.
+            No live updates match this category/query. Try clearing filters or refreshing.
           </div>
         )}
 
@@ -262,6 +327,7 @@ export function TechNewsSection() {
                 type="button"
                 className={`tech-news-card ${featuredStory?.id === story.id ? 'tech-news-card-active' : ''}`}
                 onClick={() => setSelectedStoryId(story.id)}
+                onDoubleClick={() => openStory(story.url)}
                 onMouseMove={handleCardPointerMove}
                 onMouseLeave={handleCardPointerLeave}
                 onBlur={handleCardPointerLeave}
@@ -277,10 +343,10 @@ export function TechNewsSection() {
                 <p className="tech-news-card-summary">{story.summary}</p>
                 <div className="tech-news-card-info">
                   <span>
-                    <strong>Stage:</strong> {story.stage}
+                    <strong>Source:</strong> {story.source}
                   </span>
                   <span>
-                    <strong>ETA:</strong> {story.eta}
+                    <strong>Published:</strong> {story.eta}
                   </span>
                 </div>
                 <div className="tech-news-card-meta">

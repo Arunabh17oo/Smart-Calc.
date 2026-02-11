@@ -1,6 +1,6 @@
 # ArithMatrix
 
-ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, currency conversion (including USDT), weather lookup, AI assistant chat, live market prices, and persistent history.
+ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, currency conversion (including USDT), weather lookup, AI assistant chat, route-aware live news feeds, live market prices, and persistent history.
 
 This repository contains:
 - `frontend`: React + Vite client
@@ -14,23 +14,34 @@ This repository contains:
 - Currency converter with live rates and USDT support (`USDT -> USD`, `USDT -> INR`, and reverse/cross pairs)
 - Weather search with current stats and 5-day forecast
 - AI assistant for math, currency, weather, and app help
-- Live market strip with top 10 popular stock quotes, BTC/USDT/USD/INR cards, manual refresh, auto refresh, and looping ticker animation
+- Live market strip with top 10 popular stock quotes, BTC/USDT/USD/INR cards, manual refresh, auto refresh, and smooth marquee ticker
 - History storage in MongoDB by source: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
-- Interactive UI sections including Upcoming Technologies news cards
+- Translation operations panel with top-bar jump button
+- Route-aware live news section shown below the active tool panel on every tab:
+  - `/` -> Upcoming technologies
+  - `/voice` -> Mobile phones and electronics
+  - `/camera` -> Camera and imaging
+  - `/currency` -> Currency and forex
+  - `/weather` -> Weather events
+  - `/history` -> Overall world news
+  - `/assistant` -> AI assistant updates
+- News caching and refresh flow:
+  - Backend refreshes each topic feed every 2 hours
+  - Frontend auto-refreshes based on server refresh interval and supports manual refresh
 
 ## Tech Stack
 
 - Frontend: React 18, React Router, Vite, Tesseract.js
 - Backend: Node.js, Express, Mongoose, CORS, dotenv
 - Database: MongoDB
-- External data providers: Frankfurter (fiat exchange), CoinGecko (USDT/BTC), Open-Meteo (weather/geocoding), Yahoo Finance (stocks)
+- External data providers: Frankfurter (fiat exchange), CoinGecko (USDT/BTC), Open-Meteo (weather/geocoding), Yahoo Finance (stocks), Google News RSS (news), LibreTranslate/MyMemory (translation)
 
 ## Project Structure
 
 - `frontend/src/pages`: route pages (`Basic`, `Voice`, `Camera`, `Currency`, `Weather`, `Assistant`, `History`)
-- `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`)
+- `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`, `TranslatePopup`)
 - `frontend/src/api`: HTTP clients for backend APIs
-- `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`)
+- `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`, `news`, `translate`)
 - `backend/src/models`: MongoDB models (`HistoryEntry`)
 
 ## Prerequisites
@@ -118,13 +129,16 @@ Base URL: `http://localhost:5001/api`
 - `GET /currency/convert?amount=100&from=USDT&to=INR`
 - `GET /weather/current?city=London`
 - `GET /market/overview`
+- `GET /news/feed?topic=upcoming-tech|voice|camera|currency|weather|history|assistant`
+- `GET /translate/supported`
+- `POST /translate`
 - `POST /assistant/chat`
 - `POST /assistant/solve-math`
 
 ## Notes
 
 - Voice and camera features require secure context (`https`) or `localhost`.
-- Market and currency data depend on third-party APIs and may be rate-limited.
+- Market, news, translation, weather, and currency data depend on third-party APIs and may be rate-limited.
 - Stock logos are fetched from Clearbit logo URLs and may fallback to emoji badges.
 
 ## License

@@ -7,6 +7,8 @@ import { currencyRouter } from './routes/currencyRoutes.js';
 import { healthRouter } from './routes/healthRoutes.js';
 import { historyRouter } from './routes/historyRoutes.js';
 import { marketRouter } from './routes/marketRoutes.js';
+import { newsRouter } from './routes/newsRoutes.js';
+import { translateRouter } from './routes/translateRoutes.js';
 import { weatherRouter } from './routes/weatherRoutes.js';
 
 dotenv.config();
@@ -30,6 +32,8 @@ app.use('/api/currency', currencyRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/assistant', assistantRouter);
 app.use('/api/market', marketRouter);
+app.use('/api/news', newsRouter);
+app.use('/api/translate', translateRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

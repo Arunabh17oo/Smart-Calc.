@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { InlineNavTabs, NavTabs } from './components/NavTabs.jsx';
+import { InlineNavTabs } from './components/NavTabs.jsx';
 import { MarketPulseBar } from './components/MarketPulseBar.jsx';
 import { TechNewsSection } from './components/TechNewsSection.jsx';
+import { TranslatePopup } from './components/TranslatePopup.jsx';
 import { AssistantPage } from './pages/AssistantPage.jsx';
 import { BasicPage } from './pages/BasicPage.jsx';
 import { CameraPage } from './pages/CameraPage.jsx';
@@ -14,6 +15,16 @@ import { WeatherPage } from './pages/WeatherPage.jsx';
 export default function App() {
   const location = useLocation();
   const isHomeRoute = location.pathname === '/';
+  const newsTopic =
+    {
+      '/': 'upcoming-tech',
+      '/voice': 'voice',
+      '/camera': 'camera',
+      '/currency': 'currency',
+      '/weather': 'weather',
+      '/history': 'history',
+      '/assistant': 'assistant'
+    }[location.pathname] || 'upcoming-tech';
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -39,6 +50,16 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [location.pathname]);
+
   return (
     <div className={`app-shell ${isHomeRoute ? 'app-shell-home' : ''}`}>
       <div className="bg-grid" aria-hidden="true" />
@@ -47,8 +68,11 @@ export default function App() {
 
       <header className="app-header">
         <div className="app-header-top">
-          <h1>ArithMatrix</h1>
-          <span className="brand-pill">AI Math Studio</span>
+          <div className="app-header-brand">
+            <h1>ArithMatrix</h1>
+            <span className="brand-pill">AI Math Studio</span>
+          </div>
+          <TranslatePopup placement="jump" jumpTargetId="translation-operations" />
         </div>
         <p>Smart calculator with voice, camera OCR, currency, weather, AI assistant, and history.</p>
         <div className="hero-chip-row">
@@ -74,25 +98,32 @@ export default function App() {
 
       <MarketPulseBar />
 
-      <main className="app-main">
-        <div className="route-stage" key={location.pathname}>
-          <Routes location={location}>
-            <Route path="/" element={<BasicPage />} />
-            <Route path="/voice" element={<VoicePage />} />
-            <Route path="/camera" element={<CameraPage />} />
-            <Route path="/currency" element={<CurrencyPage />} />
-            <Route path="/weather" element={<WeatherPage />} />
-            <Route path="/assistant" element={<AssistantPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </main>
+      <div className="app-content-stack">
+        <main className="app-main">
+          <div className="route-stage" key={location.pathname}>
+            <Routes location={location}>
+              <Route path="/" element={<BasicPage />} />
+              <Route path="/voice" element={<VoicePage />} />
+              <Route path="/camera" element={<CameraPage />} />
+              <Route path="/currency" element={<CurrencyPage />} />
+              <Route path="/weather" element={<WeatherPage />} />
+              <Route path="/assistant" element={<AssistantPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </main>
 
-      {isHomeRoute ? <InlineNavTabs /> : null}
-      {isHomeRoute ? <TechNewsSection /> : null}
+        <InlineNavTabs />
+        <section id="translation-operations" className="translate-operations-block" aria-label="Translation Operations">
+          <TranslatePopup placement="inline" />
+        </section>
 
-      {!isHomeRoute ? <NavTabs /> : null}
+        <section className="news-section-wrap" aria-label="Live News Section">
+          <TechNewsSection topic={newsTopic} />
+        </section>
+      </div>
+
     </div>
   );
 }

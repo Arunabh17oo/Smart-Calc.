@@ -251,56 +251,6 @@ export function MarketPulseBar() {
               );
             })}
           </div>
-
-          {enableStockLoop ? (
-            <div className="market-stock-row" aria-hidden="true">
-              {stocks.map((stock) => {
-                const hasLogoFailure = Boolean(failedLogos[stock.symbol]);
-                const priceText = formatCurrency(stock.price, stock.currency || 'USD', 2);
-                const changeClass =
-                  Number(stock.changePercent) > 0
-                    ? 'market-stock-change-up'
-                    : Number(stock.changePercent) < 0
-                      ? 'market-stock-change-down'
-                      : 'market-stock-change-flat';
-
-                return (
-                  <article className="market-stock-card" key={`${stock.symbol}-dup`}>
-                    <div className="market-stock-brand">
-                      <div className="market-stock-logo-wrap">
-                        {!hasLogoFailure ? (
-                          <img
-                            className="market-stock-logo"
-                            src={stock.logoUrl}
-                            alt=""
-                            loading="lazy"
-                            onError={() =>
-                              setFailedLogos((prev) => ({
-                                ...prev,
-                                [stock.symbol]: true
-                              }))
-                            }
-                          />
-                        ) : null}
-                        <span
-                          className={`market-stock-emoji ${hasLogoFailure ? 'market-stock-emoji-fallback' : ''}`}
-                        >
-                          {stock.emoji}
-                        </span>
-                      </div>
-                      <div className="market-stock-ident">
-                        <p className="market-stock-symbol">{stock.symbol}</p>
-                        <p className="market-stock-name">{stock.name}</p>
-                      </div>
-                    </div>
-
-                    <p className="market-stock-price">{priceText}</p>
-                    <p className={`market-stock-change ${changeClass}`}>{formatPercent(stock.changePercent)}</p>
-                  </article>
-                );
-              })}
-            </div>
-          ) : null}
         </div>
       </div>
 
