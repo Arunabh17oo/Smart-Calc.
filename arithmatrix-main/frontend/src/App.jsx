@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { InlineNavTabs, NavTabs } from './components/NavTabs.jsx';
+import { MarketPulseBar } from './components/MarketPulseBar.jsx';
 import { TechNewsSection } from './components/TechNewsSection.jsx';
 import { AssistantPage } from './pages/AssistantPage.jsx';
 import { BasicPage } from './pages/BasicPage.jsx';
@@ -70,6 +71,8 @@ export default function App() {
           <span className="status-tag">Assistant Live</span>
         </div>
       </section>
+
+      <MarketPulseBar />
 
       <main className="app-main">
         <div className="route-stage" key={location.pathname}>

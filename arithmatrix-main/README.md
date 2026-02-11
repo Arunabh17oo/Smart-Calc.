@@ -1,195 +1,132 @@
-# 🧮 ArithMatrix
-### Intelligent Calculator with Voice, Camera & Currency Conversion
+# ArithMatrix
 
-ArithMatrix is a modern, multi-modal calculator application built for user who want more than basic arithmetic.  
-It blends typed input, voice interaction, camera-based expression recognition, and currency conversion into a single, clean, professional Android app.
+ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, currency conversion (including USDT), weather lookup, AI assistant chat, live market prices, and persistent history.
 
-The project is designed with clarity, correctness, and extensibility in mind, using modern Android architecture and best practices.
+This repository contains:
+- `frontend`: React + Vite client
+- `backend`: Express + MongoDB API server
 
----
+## Features
 
-## 📌 Project Overview
+- Expression calculator with scientific and advanced modes (trig, logs, powers, constants, factorial, nCr/nPr, gcd/lcm, roots, hyperbolic trig)
+- Voice calculator using browser SpeechRecognition and optional TTS
+- Camera math solver using Tesseract OCR + assistant-based step solution
+- Currency converter with live rates and USDT support (`USDT -> USD`, `USDT -> INR`, and reverse/cross pairs)
+- Weather search with current stats and 5-day forecast
+- AI assistant for math, currency, weather, and app help
+- Live market strip with top 10 popular stock quotes, BTC/USDT/USD/INR cards, manual refresh, auto refresh, and looping ticker animation
+- History storage in MongoDB by source: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
+- Interactive UI sections including Upcoming Technologies news cards
 
-ArithMatrix helps users:
+## Tech Stack
 
-- Perform full expression-based calculations (not just button-by-button math)
-- Calculate hands-free using voice input
-- Capture and solve expressions using the camera
-- Convert currencies with precision
-- Maintain persistent calculation history across all modes
-- Reuse and manage past calculations easily
+- Frontend: React 18, React Router, Vite, Tesseract.js
+- Backend: Node.js, Express, Mongoose, CORS, dotenv
+- Database: MongoDB
+- External data providers: Frankfurter (fiat exchange), CoinGecko (USDT/BTC), Open-Meteo (weather/geocoding), Yahoo Finance (stocks)
 
-The app is minimal on the surface, yet powerful under the hood.
+## Project Structure
 
----
+- `frontend/src/pages`: route pages (`Basic`, `Voice`, `Camera`, `Currency`, `Weather`, `Assistant`, `History`)
+- `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`)
+- `frontend/src/api`: HTTP clients for backend APIs
+- `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`)
+- `backend/src/models`: MongoDB models (`HistoryEntry`)
 
-## 🌐 Web Application (MERN)
+## Prerequisites
 
-A full web implementation is now available as:
+- Node.js 18 or newer
+- npm
+- MongoDB (local or Atlas URI)
 
-- `frontend`: React (Vite) frontend
-- `backend`: Express + MongoDB backend
+## Setup
 
-Web app features include:
+### 1) Install dependencies
 
-- Basic expression calculator
-- Voice calculator (SpeechRecognition + optional TTS)
-- Camera OCR calculator (image upload/capture)
-- Currency conversion with live rates
-- Weather info with current conditions and 5-day forecast
-- AI assistant for math, weather, currency, and app guidance
-- Shared persistent history in MongoDB
+```bash
+cd backend && npm install
+cd ../frontend && npm install
+```
 
-Run and setup instructions are in `web/README.md`.
+### 2) Configure environment
 
----
+Backend (`backend/.env`):
 
-## 📱 Android Application
+```env
+PORT=5001
+MONGO_URI=mongodb://127.0.0.1:27017/arithmatrix
+CLIENT_ORIGIN=http://localhost:5173
 
-### 🔧 Tech Stack
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini
+HUGGINGFACE_API_KEY=
+HUGGINGFACE_MODEL=HuggingFaceTB/SmolLM3-3B:hf-inference
+```
 
-- **Language:** Kotlin
-- **UI:** Jetpack Compose
-- **Architecture:** MVVM
-- **Dependency Injection:** Hilt
-- **Database:** Room (SQLite)
-- **State Management:** StateFlow / Flow
-- **Async:** Kotlin Coroutines
+Frontend (`frontend/.env`):
 
----
+```env
+VITE_API_BASE_URL=http://localhost:5001/api
+```
 
-## ✨ Features
+If AI keys are empty, the app still runs using local/fallback assistant behavior.
 
-### 🧮 Basic Calculator
+### 3) Run the app
 
-- Full expression input (e.g. `50 + 20%`, `12 × (5 + 3)`)
-- Proper operator precedence handling
-- Intelligent percentage evaluation
-- Clear separation between expression and result
-- Fast and accurate evaluation engine
+Terminal 1:
 
----
+```bash
+cd backend
+npm run dev
+```
 
-### 🎙 Voice Calculator
+Terminal 2:
 
-- Speech-to-text based expression input
-- Live transcription before evaluation
-- Optional text-to-speech (TTS) output
-- Mute / unmute control for spoken results
-- Dedicated voice calculation history
+```bash
+cd frontend
+npm run dev
+```
 
----
+Open `http://localhost:5173`.
 
-### 📷 Camera Calculator
+## Build
 
-- Camera-based expression capture
-- Text recognition for printed / typed math
-- Editable recognized expressions
-- One-tap evaluation
-- Separate history tracking for camera input
+Frontend production build:
 
----
+```bash
+cd frontend
+npm run build
+```
 
-### 💱 Currency Converter
+Backend production start:
 
-- Multi-currency conversion
-- Clean numeric formatting
-- Conversion history
-- Designed for future live-rate integration
+```bash
+cd backend
+npm start
+```
 
----
+## API Overview
 
-### 🗃 Smart History System
+Base URL: `http://localhost:5001/api`
 
-- Persistent local storage using Room
-- Auto-updating history via Flow
-- Delete individual entries or clear all
-- Reuse expressions directly from history
-- Mode-aware history:
-    - Basic
-    - Voice
-    - Camera
-    - Currency
+- `GET /health`
+- `GET /history?source=BASIC|VOICE|CAMERA|CURRENCY`
+- `POST /history`
+- `DELETE /history/:id`
+- `DELETE /history?source=...`
+- `GET /currency/supported`
+- `GET /currency/convert?amount=100&from=USDT&to=INR`
+- `GET /weather/current?city=London`
+- `GET /market/overview`
+- `POST /assistant/chat`
+- `POST /assistant/solve-math`
 
----
+## Notes
 
-## 📐 Architecture (MVVM)
+- Voice and camera features require secure context (`https`) or `localhost`.
+- Market and currency data depend on third-party APIs and may be rate-limited.
+- Stock logos are fetched from Clearbit logo URLs and may fallback to emoji badges.
 
-ArithMatrix uses the **MVVM (Model–View–ViewModel)** architecture pattern:
+## License
 
-**UI (Jetpack Compose)**  
-Displays state and handles user interaction only.
-
-**ViewModel**  
-Holds UI state using StateFlow and contains all business logic.
-
-**Repository**  
-Acts as the single source of truth and mediates between UI and data sources.
-
-**Room Database**  
-Provides persistent local storage for calculation history.
-
-### This architecture ensures:
-- Clear separation of concerns
-- Testability
-- Scalability
-- Maintainability
-
----
-
-## 🎨 UI & Design Philosophy
-
-- Minimalist, distraction-free interface
-- Professional color palette (not flashy)
-- Adaptive light / dark theme
-- Designed for one-hand usage
-- No unnecessary visual noise
-
----
-
-## 🚀 Future Enhancements
-
-- Live currency exchange rates
-- Advanced OCR for handwritten expressions
-- Expression parsing from natural language
-- Cloud sync for calculation history
-- Tablet-optimized layouts
-- Accessibility improvements (voice-first mode)
-
----
-
-## 🤝 Contributors
-
-### 👨‍💻 Parth
-
-- Android Development
-- App Architecture & Core Logic
-- Calculator engine & expression evaluator
-- Room database & history system
-- Overall system design
-
-🔗 GitHub: https://github.com/ParthCh300x
-
----
-
-### 👨‍💻 Shravan Bire
-
-- Android Development
-- UI & feature contributions
-- UI refinement and interaction design
-- Feature ideation and implementation support
-- Architectural discussions and improvements
-
-🔗 GitHub: https://github.com/shravanBire
-
----
-
-## 🧠 Why This Project Matters
-
-ArithMatrix demonstrates:
-
-- Modern Android development with Jetpack Compose
-- Practical use of Room, Flow, and MVVM
-- Multi-modal user interaction (touch, voice, camera)
-- Clean architecture suitable for production apps
-- Thoughtful UX for everyday utility software
+Private/internal project unless you choose to add a license file.

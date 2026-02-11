@@ -6,6 +6,7 @@ import { assistantRouter } from './routes/assistantRoutes.js';
 import { currencyRouter } from './routes/currencyRoutes.js';
 import { healthRouter } from './routes/healthRoutes.js';
 import { historyRouter } from './routes/historyRoutes.js';
+import { marketRouter } from './routes/marketRoutes.js';
 import { weatherRouter } from './routes/weatherRoutes.js';
 
 dotenv.config();
@@ -28,6 +29,7 @@ app.use('/api/history', historyRouter);
 app.use('/api/currency', currencyRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/assistant', assistantRouter);
+app.use('/api/market', marketRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

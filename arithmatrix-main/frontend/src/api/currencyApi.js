@@ -1,6 +1,6 @@
 import { request } from './http.js';
 
-const DEFAULT_CURRENCIES = ['USD', 'EUR', 'INR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY'];
+const DEFAULT_CURRENCIES = ['USD', 'USDT', 'EUR', 'INR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY'];
 
 export async function fetchCurrencies() {
   try {

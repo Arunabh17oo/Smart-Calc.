@@ -1,6 +1,9 @@
 import { Router } from 'express';
 
-const SUPPORTED_CURRENCIES = new Set(['USD', 'EUR', 'INR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY']);
+const SUPPORTED_CURRENCIES = new Set(['USD', 'USDT', 'EUR', 'INR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY']);
+const USDT_RATE_URL =
+  'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=usd,inr';
+const FRANKFURTER_LATEST_URL = 'https://api.frankfurter.app/latest';
 const DEFAULT_SUGGESTIONS = [
   'calculate 125 * 8',
   'convert 100 USD to INR',
@@ -515,11 +518,15 @@ function trySolveAlgebraEquation(questionRaw) {
 }
 
 function parseCurrencyIntent(message) {
-  const text = String(message || '').toUpperCase();
+  const text = String(message || '')
+    .toUpperCase()
+    .replace(/\bINDIAN RUPEES?\b/g, 'INR')
+    .replace(/\bRUPEES?\b/g, 'INR')
+    .replace(/\bRS\.?\b/g, 'INR');
 
   const patterns = [
-    /(?:CONVERT|EXCHANGE)\s+([\d.]+)\s*([A-Z]{3})\s+(?:TO|INTO|IN)\s+([A-Z]{3})/,
-    /([\d.]+)\s*([A-Z]{3})\s+(?:TO|INTO|IN)\s+([A-Z]{3})/
+    /(?:CONVERT|EXCHANGE)\s+([\d.]+)\s*([A-Z]{3,4})\s+(?:TO|INTO|IN)\s+([A-Z]{3,4})/,
+    /([\d.]+)\s*([A-Z]{3,4})\s+(?:TO|INTO|IN)\s+([A-Z]{3,4})/
   ];
 
   for (const pattern of patterns) {
@@ -539,14 +546,26 @@ function parseCurrencyIntent(message) {
   return null;
 }
 
-async function convertCurrency({ amount, from, to }) {
+function toFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function convertFiatCurrency({ amount, from, to }) {
+  if (from === to) {
+    return {
+      converted: amount,
+      date: new Date().toISOString().slice(0, 10)
+    };
+  }
+
   const params = new URLSearchParams({
     amount: String(amount),
     from,
     to
   });
 
-  const response = await fetch(`https://api.frankfurter.app/latest?${params.toString()}`);
+  const response = await fetch(`${FRANKFURTER_LATEST_URL}?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to fetch live rates.');
   }
@@ -562,6 +581,60 @@ async function convertCurrency({ amount, from, to }) {
     converted,
     date: data.date
   };
+}
+
+async function fetchUsdtRates() {
+  const response = await fetch(USDT_RATE_URL);
+  if (!response.ok) {
+    throw new Error('Failed to fetch live rates.');
+  }
+
+  const data = await response.json();
+  const usdRate = toFiniteNumber(data?.tether?.usd);
+  const inrRate = toFiniteNumber(data?.tether?.inr);
+
+  if (!Number.isFinite(usdRate) || !Number.isFinite(inrRate) || usdRate <= 0 || inrRate <= 0) {
+    throw new Error('Currency conversion failed.');
+  }
+
+  return {
+    usdRate,
+    inrRate,
+    date: new Date().toISOString().slice(0, 10)
+  };
+}
+
+async function convertCurrency({ amount, from, to }) {
+  if (from !== 'USDT' && to !== 'USDT') {
+    return convertFiatCurrency({ amount, from, to });
+  }
+
+  const usdt = await fetchUsdtRates();
+
+  if (from === 'USDT') {
+    if (to === 'USD') return { converted: amount * usdt.usdRate, date: usdt.date };
+    if (to === 'INR') return { converted: amount * usdt.inrRate, date: usdt.date };
+
+    const usdAmount = amount * usdt.usdRate;
+    const fiatConversion = await convertFiatCurrency({ amount: usdAmount, from: 'USD', to });
+    return {
+      converted: fiatConversion.converted,
+      date: fiatConversion.date || usdt.date
+    };
+  }
+
+  if (to === 'USDT') {
+    if (from === 'USD') return { converted: amount / usdt.usdRate, date: usdt.date };
+    if (from === 'INR') return { converted: amount / usdt.inrRate, date: usdt.date };
+
+    const usdConversion = await convertFiatCurrency({ amount, from, to: 'USD' });
+    return {
+      converted: usdConversion.converted / usdt.usdRate,
+      date: usdConversion.date || usdt.date
+    };
+  }
+
+  return convertFiatCurrency({ amount, from, to });
 }
 
 function parseWeatherIntent(message) {
@@ -640,7 +713,7 @@ function buildHelpReply() {
   return [
     'I can help you quickly with:',
     '1. Math: "calculate 125 * 8"',
-    '2. Currency: "convert 100 USD to INR"',
+    '2. Currency: "convert 100 USD to INR" or "convert 25 USDT to INR"',
     '3. Weather: "weather in New York"',
     '4. App guidance: ask how to use Basic, Voice, Camera, Currency, Weather, Assistant, or History.'
   ].join('\n');
@@ -681,7 +754,7 @@ function getSuggestions(mode) {
     case 'math':
       return ['calculate 250 + 18%', 'calculate 45*23', 'calculate (80-20)/3'];
     case 'currency':
-      return ['convert 500 INR to USD', 'convert 75 GBP to EUR', 'convert 100 AUD to JPY'];
+      return ['convert 500 INR to USD', 'convert 25 USDT to INR', 'convert 100 AUD to JPY'];
     case 'weather':
       return ['weather in Mumbai', 'weather in Tokyo', 'weather in San Francisco'];
     case 'openai':

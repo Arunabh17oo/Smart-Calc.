@@ -5,7 +5,7 @@ import { createHistoryEntry } from '../api/historyApi.js';
 
 export function CurrencyPage() {
   const [params] = useSearchParams();
-  const [currencies, setCurrencies] = useState(['USD', 'EUR', 'INR']);
+  const [currencies, setCurrencies] = useState(['USD', 'USDT', 'EUR', 'INR']);
   const [amount, setAmount] = useState('');
   const [from, setFrom] = useState('USD');
   const [to, setTo] = useState('INR');
@@ -21,7 +21,7 @@ export function CurrencyPage() {
     const expression = params.get('expression');
     if (!expression) return;
 
-    const match = expression.match(/^\s*([\d.]+)\s+([A-Za-z]{3})\s+to\s+([A-Za-z]{3})\s*$/i);
+    const match = expression.match(/^\s*([\d.]+)\s+([A-Za-z]{3,4})\s+to\s+([A-Za-z]{3,4})\s*$/i);
     if (!match) return;
 
     setAmount(match[1]);
