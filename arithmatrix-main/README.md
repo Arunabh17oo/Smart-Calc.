@@ -24,6 +24,10 @@ This repository contains:
 - Weather search with current stats and 5-day forecast
 - AI assistant for math, currency, weather, and app help
 - Live market strip with top 10 popular stock quotes, BTC/USDT/USD/INR cards, manual refresh, auto refresh, and smooth marquee ticker
+- ATS Score Checker page with JD-vs-resume scoring breakdown (keywords, skills, sections, formatting, impact, contact)
+- Resume upload-to-text flow for ATS:
+  - Image resumes scanned with OCR (Tesseract)
+  - PDF content parsing with filtering to avoid raw `%PDF/obj/xref` noise in the Resume Text box
 - History storage in MongoDB by source: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
 - Translation operations panel with top-bar jump button
 - Footer with:
@@ -161,6 +165,14 @@ Base URL: `http://localhost:5001/api`
 - Market, news, translation, weather, and currency data depend on third-party APIs and may be rate-limited.
 - Stock logos are fetched from Clearbit logo URLs and may fallback to emoji badges.
 - History source values currently stored in MongoDB: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`.
+
+## Recent Updates
+
+Updated on **February 11, 2026**:
+- Added ATS Score Checker route and nav tab link.
+- Added ATS scoring engine with component-wise scoring and recommendation output.
+- Added resume file upload scan support for ATS input.
+- Fixed resume text issue where PDFs could appear as raw internal document structure by adding PDF-source detection and readable-text extraction/cleanup.
 
 ## License
 
