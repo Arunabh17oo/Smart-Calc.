@@ -1,6 +1,6 @@
 import { Router } from 'express';
+import { getSupportedCurrencySet } from '../lib/currencySupport.js';
 
-const SUPPORTED_CURRENCIES = new Set(['USD', 'USDT', 'EUR', 'INR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY']);
 const USDT_RATE_URL =
   'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=usd,inr';
 const FRANKFURTER_LATEST_URL = 'https://api.frankfurter.app/latest';
@@ -538,7 +538,6 @@ function parseCurrencyIntent(message) {
     const to = match[3];
 
     if (!Number.isFinite(amount) || amount <= 0) return null;
-    if (!SUPPORTED_CURRENCIES.has(from) || !SUPPORTED_CURRENCIES.has(to)) return null;
 
     return { amount, from, to };
   }
@@ -1082,6 +1081,17 @@ assistantRouter.post('/chat', async (req, res, next) => {
 
     const currencyIntent = parseCurrencyIntent(message);
     if (currencyIntent) {
+      const supportedCurrencies = await getSupportedCurrencySet();
+      if (!supportedCurrencies.has(currencyIntent.from) || !supportedCurrencies.has(currencyIntent.to)) {
+        return res.json(
+          buildResponse(
+            'Unsupported currency code. Use standard currency codes like USD, EUR, INR, JPY, AED, SGD, or USDT.',
+            'currency_invalid',
+            ['convert 100 USD to INR', 'convert 50 EUR to GBP', 'convert 100 AED to SGD']
+          )
+        );
+      }
+
       try {
         const conversion = await convertCurrency(currencyIntent);
         const reply = `${currencyIntent.amount.toFixed(2)} ${currencyIntent.from} = ${conversion.converted.toFixed(2)} ${currencyIntent.to} (rate date: ${conversion.date})`;

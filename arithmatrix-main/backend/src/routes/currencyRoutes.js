@@ -1,7 +1,6 @@
 import { Router } from 'express';
+import { getSupportedCurrencies, getSupportedCurrencySet } from '../lib/currencySupport.js';
 
-const SUPPORTED_CURRENCIES = ['USD', 'USDT', 'EUR', 'INR', 'GBP', 'JPY', 'CAD', 'AUD', 'CNY'];
-const SUPPORTED_CURRENCY_SET = new Set(SUPPORTED_CURRENCIES);
 const USDT_RATE_URL =
   'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=usd,inr';
 const FRANKFURTER_LATEST_URL = 'https://api.frankfurter.app/latest';
@@ -105,8 +104,13 @@ async function convertCurrency({ amount, from, to }) {
   return convertFiatCurrency({ amount, from, to });
 }
 
-currencyRouter.get('/supported', (_req, res) => {
-  res.json({ currencies: SUPPORTED_CURRENCIES });
+currencyRouter.get('/supported', async (_req, res, next) => {
+  try {
+    const currencies = await getSupportedCurrencies();
+    res.json({ currencies });
+  } catch (error) {
+    next(error);
+  }
 });
 
 currencyRouter.get('/convert', async (req, res, next) => {
@@ -123,7 +127,8 @@ currencyRouter.get('/convert', async (req, res, next) => {
       return res.status(400).json({ message: 'from and to currency are required.' });
     }
 
-    if (!SUPPORTED_CURRENCY_SET.has(from) || !SUPPORTED_CURRENCY_SET.has(to)) {
+    const supportedCurrencies = await getSupportedCurrencySet();
+    if (!supportedCurrencies.has(from) || !supportedCurrencies.has(to)) {
       return res.status(400).json({ message: 'Unsupported currency selected.' });
     }
 
