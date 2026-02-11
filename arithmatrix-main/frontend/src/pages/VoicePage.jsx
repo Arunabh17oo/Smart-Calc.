@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createHistoryEntry } from '../api/historyApi.js';
-import { evaluateExpression, formatResult } from '../utils/calculatorEngine.js';
+import { evaluateExpression, formatResult, isUndefinedMathError } from '../utils/calculatorEngine.js';
 import { normalizeVoiceExpression } from '../utils/voiceNormalize.js';
 
 function dedupe(list) {
@@ -87,7 +87,33 @@ export function VoicePage() {
         }
 
         return true;
-      } catch (_calcErr) {
+      } catch (calcErr) {
+        if (isUndefinedMathError(calcErr)) {
+          setExpression(candidate);
+          setNormalizedPreview(normalized);
+          setResult('Undefined');
+          setError('');
+          setSaveWarning('');
+
+          if (ttsEnabledRef.current && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance('Undefined');
+            utterance.lang = speechLangRef.current;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+          }
+
+          try {
+            await createHistoryEntry({
+              expression: candidate,
+              result: 'Undefined',
+              source: 'VOICE'
+            });
+          } catch (_historyError) {
+            setSaveWarning('Recognized, but could not save to history (API not reachable).');
+          }
+
+          return true;
+        }
         // Try next candidate/alternative.
       }
     }
