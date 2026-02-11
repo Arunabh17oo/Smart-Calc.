@@ -4,6 +4,7 @@ const TABS = [
   { to: '/', label: 'Basic' },
   { to: '/voice', label: 'Voice' },
   { to: '/camera', label: 'Camera' },
+  { to: '/unit', label: 'Units' },
   { to: '/currency', label: 'Currency' },
   { to: '/weather', label: 'Weather' },
   { to: '/assistant', label: 'Assistant' },

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { DEFAULT_CURRENCIES, convertCurrency, fetchCurrencies } from '../api/currencyApi.js';
+import { convertCurrency, fetchCurrencies } from '../api/currencyApi.js';
 import { createHistoryEntry } from '../api/historyApi.js';
 
 export function CurrencyPage() {
   const [params] = useSearchParams();
-  const [currencies, setCurrencies] = useState(DEFAULT_CURRENCIES);
+  const [currencies, setCurrencies] = useState(['USD', 'USDT', 'EUR', 'INR']);
   const [amount, setAmount] = useState('');
   const [from, setFrom] = useState('USD');
   const [to, setTo] = useState('INR');

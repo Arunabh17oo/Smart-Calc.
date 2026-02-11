@@ -9,6 +9,7 @@ import { BasicPage } from './pages/BasicPage.jsx';
 import { CameraPage } from './pages/CameraPage.jsx';
 import { CurrencyPage } from './pages/CurrencyPage.jsx';
 import { HistoryPage } from './pages/HistoryPage.jsx';
+import { UnitPage } from './pages/UnitPage.jsx';
 import { VoicePage } from './pages/VoicePage.jsx';
 import { WeatherPage } from './pages/WeatherPage.jsx';
 
@@ -20,6 +21,7 @@ export default function App() {
       '/': 'upcoming-tech',
       '/voice': 'voice',
       '/camera': 'camera',
+      '/unit': 'upcoming-tech',
       '/currency': 'currency',
       '/weather': 'weather',
       '/history': 'history',
@@ -74,10 +76,14 @@ export default function App() {
           </div>
           <TranslatePopup placement="jump" jumpTargetId="translation-operations" />
         </div>
-        <p>Smart calculator with voice, camera OCR, currency, weather, AI assistant, and history.</p>
+        <p>
+          Smart calculator with voice, camera OCR, unit conversion, currency, weather, AI assistant,
+          and history.
+        </p>
         <div className="hero-chip-row">
           <span className="hero-chip">Voice</span>
           <span className="hero-chip">Camera OCR</span>
+          <span className="hero-chip">Unit Converter</span>
           <span className="hero-chip">Weather</span>
           <span className="hero-chip">Assistant</span>
         </div>
@@ -91,6 +97,7 @@ export default function App() {
         <div className="status-metrics">
           <span className="status-tag">Voice Ready</span>
           <span className="status-tag">OCR Ready</span>
+          <span className="status-tag">Unit Engine</span>
           <span className="status-tag">Weather API</span>
           <span className="status-tag">Assistant Live</span>
         </div>
@@ -105,6 +112,7 @@ export default function App() {
               <Route path="/" element={<BasicPage />} />
               <Route path="/voice" element={<VoicePage />} />
               <Route path="/camera" element={<CameraPage />} />
+              <Route path="/unit" element={<UnitPage />} />
               <Route path="/currency" element={<CurrencyPage />} />
               <Route path="/weather" element={<WeatherPage />} />
               <Route path="/assistant" element={<AssistantPage />} />
