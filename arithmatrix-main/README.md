@@ -1,6 +1,6 @@
 # ArithMatrix
 
-ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, currency conversion (including USDT), weather lookup, AI assistant chat, route-aware live news feeds, live market prices, and persistent history.
+ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, unit conversion, world constants sticky notes, currency conversion (including USDT), weather lookup, AI assistant chat, route-aware live news feeds, live market prices, and persistent history.
 
 This repository contains:
 - `frontend`: React + Vite client
@@ -9,6 +9,15 @@ This repository contains:
 ## Features
 
 - Expression calculator with scientific and advanced modes (trig, logs, powers, constants, factorial, nCr/nPr, gcd/lcm, roots, hyperbolic trig)
+- Dedicated Unit Converter tab with grouped conversion categories:
+  - Basic units: length, area, volume, time
+  - Temperature
+  - Weight / mass
+  - Compound units: speed, acceleration, force, pressure, energy, power, density, torque
+- World Constants Board inside Units:
+  - 60+ commonly used math/science constants
+  - Sticky-note style cards
+  - Filter + search by category, name, symbol, value, and unit
 - Voice calculator using browser SpeechRecognition and optional TTS
 - Camera math solver using Tesseract OCR + assistant-based step solution
 - Currency converter with live rates and USDT support (`USDT -> USD`, `USDT -> INR`, and reverse/cross pairs)
@@ -17,10 +26,16 @@ This repository contains:
 - Live market strip with top 10 popular stock quotes, BTC/USDT/USD/INR cards, manual refresh, auto refresh, and smooth marquee ticker
 - History storage in MongoDB by source: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
 - Translation operations panel with top-bar jump button
+- Footer with:
+  - About section
+  - Help section (support email)
+  - Raise a Query quick contact button (mailto)
+  - Contact form (email + query text) that opens a prefilled email draft
 - Route-aware live news section shown below the active tool panel on every tab:
   - `/` -> Upcoming technologies
   - `/voice` -> Mobile phones and electronics
   - `/camera` -> Camera and imaging
+  - `/unit` -> Upcoming technologies
   - `/currency` -> Currency and forex
   - `/weather` -> Weather events
   - `/history` -> Overall world news
@@ -38,7 +53,7 @@ This repository contains:
 
 ## Project Structure
 
-- `frontend/src/pages`: route pages (`Basic`, `Voice`, `Camera`, `Currency`, `Weather`, `Assistant`, `History`)
+- `frontend/src/pages`: route pages (`Basic`, `Voice`, `Camera`, `Unit`, `Currency`, `Weather`, `Assistant`, `History`)
 - `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`, `TranslatePopup`)
 - `frontend/src/api`: HTTP clients for backend APIs
 - `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`, `news`, `translate`)
@@ -100,6 +115,11 @@ npm run dev
 
 Open `http://localhost:5173`.
 
+## Support
+
+- For help/issues: `Arunabh17oo@gmail.com`
+- Footer contact actions open email compose with prefilled details.
+
 ## Build
 
 Frontend production build:
@@ -140,6 +160,7 @@ Base URL: `http://localhost:5001/api`
 - Voice and camera features require secure context (`https`) or `localhost`.
 - Market, news, translation, weather, and currency data depend on third-party APIs and may be rate-limited.
 - Stock logos are fetched from Clearbit logo URLs and may fallback to emoji badges.
+- History source values currently stored in MongoDB: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`.
 
 ## License
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { InlineNavTabs } from './components/NavTabs.jsx';
 import { MarketPulseBar } from './components/MarketPulseBar.jsx';
@@ -15,7 +15,13 @@ import { WeatherPage } from './pages/WeatherPage.jsx';
 
 export default function App() {
   const location = useLocation();
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactQuery, setContactQuery] = useState('');
+  const [contactStatus, setContactStatus] = useState({ type: '', message: '' });
   const isHomeRoute = location.pathname === '/';
+  const currentYear = new Date().getFullYear();
+  const contactEmailAddress = 'Arunabh17oo@gmail.com';
+  const directContactMailUrl = `mailto:${contactEmailAddress}?subject=${encodeURIComponent('ArithMatrix Contact')}&body=${encodeURIComponent('Hello ArithMatrix Team,')}`;
   const newsTopic =
     {
       '/': 'upcoming-tech',
@@ -61,6 +67,36 @@ export default function App() {
 
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
+
+  function onContactSubmit(event) {
+    event.preventDefault();
+
+    const trimmedEmail = contactEmail.trim();
+    const trimmedQuery = contactQuery.trim();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(trimmedEmail)) {
+      setContactStatus({ type: 'error', message: 'Please enter a valid email address.' });
+      return;
+    }
+
+    if (trimmedQuery.length < 8) {
+      setContactStatus({ type: 'error', message: 'Please write a short query (at least 8 characters).' });
+      return;
+    }
+
+    const subject = encodeURIComponent('ArithMatrix Contact Query');
+    const body = encodeURIComponent(`From: ${trimmedEmail}\n\nQuery:\n${trimmedQuery}`);
+    const mailtoUrl = `mailto:${contactEmailAddress}?subject=${subject}&body=${body}`;
+
+    if (typeof window !== 'undefined') {
+      window.location.href = mailtoUrl;
+    }
+
+    setContactStatus({ type: 'success', message: 'Your query draft opened in your email app.' });
+    setContactEmail('');
+    setContactQuery('');
+  }
 
   return (
     <div className={`app-shell ${isHomeRoute ? 'app-shell-home' : ''}`}>
@@ -130,6 +166,85 @@ export default function App() {
         <section className="news-section-wrap" aria-label="Live News Section">
           <TechNewsSection topic={newsTopic} />
         </section>
+
+        <footer className="app-footer" aria-label="Footer">
+          <div className="footer-grid">
+            <section className="footer-card">
+              <h3>About</h3>
+              <p>
+                ArithMatrix is a smart math studio with calculator tools, conversion workflows, AI
+                assistance, weather, currency, and history in one place.
+              </p>
+            </section>
+
+            <section className="footer-card">
+              <h3>Help</h3>
+              <p>For any issue, mail on {contactEmailAddress}.</p>
+              <a className="footer-link footer-mail-link" href={`mailto:${contactEmailAddress}`}>
+                {contactEmailAddress}
+              </a>
+            </section>
+
+            <section className="footer-card">
+              <h3>Raise a Query</h3>
+              <p>
+                Have a bug report, feature request, or account question? Use the contact form to
+                send your query directly by email.
+              </p>
+              <a className="ghost-btn footer-raise-btn" href={directContactMailUrl}>
+                Contact
+              </a>
+            </section>
+
+            <section className="footer-card footer-contact-card" id="contact-us-box">
+              <h3>Contact Us</h3>
+              <form className="footer-contact-form" onSubmit={onContactSubmit}>
+                <label className="footer-label" htmlFor="contact-email-input">
+                  Email
+                </label>
+                <input
+                  id="contact-email-input"
+                  className="text-input footer-input"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={contactEmail}
+                  onChange={(event) => {
+                    setContactEmail(event.target.value);
+                    if (contactStatus.message) setContactStatus({ type: '', message: '' });
+                  }}
+                />
+
+                <label className="footer-label" htmlFor="contact-query-input">
+                  Query
+                </label>
+                <textarea
+                  id="contact-query-input"
+                  className="text-input footer-textarea"
+                  placeholder="Write your question or issue"
+                  value={contactQuery}
+                  onChange={(event) => {
+                    setContactQuery(event.target.value);
+                    if (contactStatus.message) setContactStatus({ type: '', message: '' });
+                  }}
+                />
+
+                <button type="submit" className="action-btn">
+                  Send Query
+                </button>
+              </form>
+
+              {contactStatus.message ? (
+                <p className={`footer-status ${contactStatus.type === 'error' ? 'footer-status-error' : 'footer-status-success'}`}>
+                  {contactStatus.message}
+                </p>
+              ) : null}
+            </section>
+          </div>
+
+          <div className="footer-bottom">
+            <p>Copyright {currentYear} ArithMatrix. All rights reserved.</p>
+          </div>
+        </footer>
       </div>
 
     </div>
