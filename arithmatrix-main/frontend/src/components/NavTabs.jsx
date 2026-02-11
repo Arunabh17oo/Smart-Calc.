@@ -26,3 +26,20 @@ export function NavTabs() {
     </nav>
   );
 }
+
+export function InlineNavTabs() {
+  return (
+    <nav className="tabs tabs-inline" aria-label="Primary navigation">
+      {TABS.map((tab) => (
+        <NavLink
+          key={tab.to}
+          to={tab.to}
+          className={({ isActive }) => `tab-link ${isActive ? 'tab-link-active' : ''}`}
+          end={tab.to === '/'}
+        >
+          {tab.label}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}

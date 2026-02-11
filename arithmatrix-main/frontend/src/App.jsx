@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { NavTabs } from './components/NavTabs.jsx';
+import { InlineNavTabs, NavTabs } from './components/NavTabs.jsx';
+import { TechNewsSection } from './components/TechNewsSection.jsx';
 import { AssistantPage } from './pages/AssistantPage.jsx';
 import { BasicPage } from './pages/BasicPage.jsx';
 import { CameraPage } from './pages/CameraPage.jsx';
@@ -11,6 +12,7 @@ import { WeatherPage } from './pages/WeatherPage.jsx';
 
 export default function App() {
   const location = useLocation();
+  const isHomeRoute = location.pathname === '/';
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -37,7 +39,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isHomeRoute ? 'app-shell-home' : ''}`}>
       <div className="bg-grid" aria-hidden="true" />
       <div className="bg-orb bg-orb-a" aria-hidden="true" />
       <div className="bg-orb bg-orb-b" aria-hidden="true" />
@@ -84,7 +86,10 @@ export default function App() {
         </div>
       </main>
 
-      <NavTabs />
+      {isHomeRoute ? <InlineNavTabs /> : null}
+      {isHomeRoute ? <TechNewsSection /> : null}
+
+      {!isHomeRoute ? <NavTabs /> : null}
     </div>
   );
 }
