@@ -6,6 +6,7 @@ const TABS = [
   { to: '/camera', label: 'Camera' },
   { to: '/unit', label: 'Units' },
   { to: '/currency', label: 'Currency' },
+  { to: '/ats', label: 'ATS' },
   { to: '/weather', label: 'Weather' },
   { to: '/assistant', label: 'Assistant' },
   { to: '/history', label: 'History' }
