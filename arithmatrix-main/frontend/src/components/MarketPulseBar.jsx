@@ -176,7 +176,7 @@ export function MarketPulseBar() {
       <div className="market-strip-head">
         <div>
           <p className="market-strip-kicker">Live Market Pulse</p>
-          <h2>Top 10 Popular Stocks + Crypto Rates</h2>
+          <h2>Top 10 Popular Indian Stocks + Crypto Rates</h2>
         </div>
         <div className="market-strip-controls">
           <div className="market-strip-meta">

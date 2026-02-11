@@ -1,16 +1,16 @@
 import { Router } from 'express';
 
 const STOCK_WATCHLIST = [
-  { symbol: 'AAPL', name: 'Apple', emoji: '🍎', logoDomain: 'apple.com' },
-  { symbol: 'MSFT', name: 'Microsoft', emoji: '🪟', logoDomain: 'microsoft.com' },
-  { symbol: 'AMZN', name: 'Amazon', emoji: '📦', logoDomain: 'amazon.com' },
-  { symbol: 'GOOGL', name: 'Alphabet', emoji: '🔎', logoDomain: 'google.com' },
-  { symbol: 'TSLA', name: 'Tesla', emoji: '⚡', logoDomain: 'tesla.com' },
-  { symbol: 'NVDA', name: 'NVIDIA', emoji: '🎮', logoDomain: 'nvidia.com' },
-  { symbol: 'META', name: 'Meta', emoji: '🌐', logoDomain: 'meta.com' },
-  { symbol: 'WMT', name: 'Walmart', emoji: '🛒', logoDomain: 'walmart.com' },
-  { symbol: 'KO', name: 'Coca-Cola', emoji: '🥤', logoDomain: 'coca-cola.com' },
-  { symbol: 'JPM', name: 'JPMorgan', emoji: '🏦', logoDomain: 'jpmorganchase.com' }
+  { ticker: 'RELIANCE.NS', symbol: 'RELIANCE', name: 'Reliance', emoji: '🛢️', logoDomain: 'ril.com' },
+  { ticker: 'TCS.NS', symbol: 'TCS', name: 'Tata Consultancy', emoji: '💻', logoDomain: 'tcs.com' },
+  { ticker: 'HDFCBANK.NS', symbol: 'HDFCBANK', name: 'HDFC Bank', emoji: '🏦', logoDomain: 'hdfcbank.com' },
+  { ticker: 'INFY.NS', symbol: 'INFY', name: 'Infosys', emoji: '🧠', logoDomain: 'infosys.com' },
+  { ticker: 'ICICIBANK.NS', symbol: 'ICICIBANK', name: 'ICICI Bank', emoji: '💳', logoDomain: 'icicibank.com' },
+  { ticker: 'ITC.NS', symbol: 'ITC', name: 'ITC', emoji: '🏭', logoDomain: 'itcportal.com' },
+  { ticker: 'SBIN.NS', symbol: 'SBIN', name: 'State Bank of India', emoji: '🏛️', logoDomain: 'sbi.co.in' },
+  { ticker: 'LT.NS', symbol: 'LT', name: 'Larsen & Toubro', emoji: '🏗️', logoDomain: 'larsentoubro.com' },
+  { ticker: 'BHARTIARTL.NS', symbol: 'BHARTIARTL', name: 'Bharti Airtel', emoji: '📶', logoDomain: 'airtel.in' },
+  { ticker: 'HINDUNILVR.NS', symbol: 'HINDUNILVR', name: 'Hindustan Unilever', emoji: '🧴', logoDomain: 'unilever.com' }
 ];
 
 const STOCKS_SOURCE_URL = 'https://query1.finance.yahoo.com/v7/finance/quote';
@@ -47,7 +47,7 @@ function getGrowwUrl(symbol) {
 }
 
 async function fetchStockQuoteMap() {
-  const symbols = STOCK_WATCHLIST.map((stock) => stock.symbol).join(',');
+  const symbols = STOCK_WATCHLIST.map((stock) => stock.ticker).join(',');
   const params = new URLSearchParams({ symbols });
   const response = await fetch(`${STOCKS_SOURCE_URL}?${params.toString()}`);
 
@@ -108,7 +108,7 @@ async function fetchStocks() {
   }
 
   const baseStocks = STOCK_WATCHLIST.map((stock) => {
-    const quote = quoteBySymbol.get(stock.symbol);
+    const quote = quoteBySymbol.get(stock.ticker);
     const price = firstFinite(
       quote?.regularMarketPrice,
       quote?.postMarketPrice,
@@ -123,11 +123,12 @@ async function fetchStocks() {
 
     return {
       symbol: stock.symbol,
+      tickerSymbol: stock.ticker,
       name: quote?.shortName || quote?.longName || stock.name,
       emoji: stock.emoji,
       logoUrl: `https://logo.clearbit.com/${stock.logoDomain}`,
       growwUrl: getGrowwUrl(stock.symbol),
-      currency: quote?.currency || 'USD',
+      currency: quote?.currency || 'INR',
       marketTime: quote?.regularMarketTime
         ? new Date(Number(quote.regularMarketTime) * 1000).toISOString()
         : null,
@@ -138,20 +139,20 @@ async function fetchStocks() {
 
   const symbolsMissingPrice = baseStocks
     .filter((stock) => !Number.isFinite(stock.price))
-    .map((stock) => stock.symbol);
+    .map((stock) => stock.tickerSymbol);
 
   if (symbolsMissingPrice.length) {
     const chartFallback = await fetchStockChartFallback(symbolsMissingPrice);
 
     for (const stock of baseStocks) {
       if (Number.isFinite(stock.price)) continue;
-      const fallback = chartFallback.get(stock.symbol);
+      const fallback = chartFallback.get(stock.tickerSymbol);
       if (!fallback) continue;
       stock.price = fallback.price;
       stock.changePercent = Number.isFinite(stock.changePercent)
         ? stock.changePercent
         : fallback.changePercent;
-      stock.currency = stock.currency || fallback.currency || 'USD';
+      stock.currency = stock.currency || fallback.currency || 'INR';
       stock.marketTime = stock.marketTime || fallback.marketTime || null;
     }
   }
@@ -161,7 +162,7 @@ async function fetchStocks() {
     throw new Error('Failed to fetch live stock prices.');
   }
 
-  return baseStocks;
+  return baseStocks.map(({ tickerSymbol, ...stock }) => stock);
 }
 
 async function fetchCryptoRates() {

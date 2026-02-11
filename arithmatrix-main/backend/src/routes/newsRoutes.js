@@ -2,6 +2,10 @@ import { Router } from 'express';
 
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const GOOGLE_NEWS_RSS_URL = 'https://news.google.com/rss/search';
+const NEWS_REGIONS = [
+  { hl: 'en-US', gl: 'US', ceid: 'US:en' },
+  { hl: 'en-IN', gl: 'IN', ceid: 'IN:en' }
+];
 
 const TOPIC_CONFIG = {
   'upcoming-tech': {
@@ -222,7 +226,7 @@ function parseRssItems(xml) {
   return blocks;
 }
 
-function extractStories(topicKey, xml, maxStories = 9) {
+function extractStories(topicKey, xml, maxStories = 9, regionLabel = 'Global') {
   const blocks = parseRssItems(xml);
 
   return blocks
@@ -243,7 +247,7 @@ function extractStories(topicKey, xml, maxStories = 9) {
         title: title || 'Untitled update',
         summary,
         category,
-        source: source || 'Google News',
+        source: source ? `${source} (${regionLabel})` : `Google News (${regionLabel})`,
         url: link || null,
         publishedAt: publishedAtIso,
         stage: 'Live Update',
@@ -256,18 +260,38 @@ function extractStories(topicKey, xml, maxStories = 9) {
     .filter((item) => Boolean(item.title));
 }
 
-async function fetchTopicStories(topicKey) {
-  const config = TOPIC_CONFIG[topicKey];
-  if (!config) {
-    throw new Error('Unsupported news topic.');
-  }
+function getRegionLabel(region) {
+  return region.gl === 'IN' ? 'India' : 'International';
+}
 
+function normalizeStoryKey(story) {
+  return `${String(story?.title || '').toLowerCase().trim()}|${String(story?.url || '')
+    .toLowerCase()
+    .trim()}`;
+}
+
+function applyStoryDerivedFields(story, index) {
+  const publishedAt = toIsoDate(story?.publishedAt);
+  const summary = String(story?.summary || story?.title || 'Read full coverage.');
+
+  return {
+    ...story,
+    publishedAt,
+    summary,
+    eta: formatPublishedLabel(publishedAt),
+    freshness: formatFreshness(publishedAt),
+    readTime: estimateReadTime(summary),
+    momentum: computeMomentumScore(index, publishedAt)
+  };
+}
+
+async function fetchRssStoriesByRegion(topicKey, config, region, maxStoriesPerRegion) {
   const query = `${config.query} when:3d`;
   const params = new URLSearchParams({
     q: query,
-    hl: 'en-US',
-    gl: 'US',
-    ceid: 'US:en'
+    hl: region.hl,
+    gl: region.gl,
+    ceid: region.ceid
   });
 
   const response = await fetch(`${GOOGLE_NEWS_RSS_URL}?${params.toString()}`, {
@@ -277,11 +301,40 @@ async function fetchTopicStories(topicKey) {
   });
 
   if (!response.ok) {
-    throw new Error('Unable to fetch the latest news feed right now.');
+    throw new Error(`Unable to fetch ${getRegionLabel(region)} news feed right now.`);
   }
 
   const xml = await response.text();
-  const stories = extractStories(topicKey, xml, 9);
+  return extractStories(topicKey, xml, maxStoriesPerRegion, getRegionLabel(region));
+}
+
+async function fetchTopicStories(topicKey) {
+  const config = TOPIC_CONFIG[topicKey];
+  if (!config) {
+    throw new Error('Unsupported news topic.');
+  }
+
+  const regionResults = await Promise.allSettled(
+    NEWS_REGIONS.map((region) => fetchRssStoriesByRegion(topicKey, config, region, 7))
+  );
+
+  const merged = [];
+  const seen = new Set();
+
+  for (const result of regionResults) {
+    if (result.status !== 'fulfilled') continue;
+    for (const story of result.value) {
+      const key = normalizeStoryKey(story);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(story);
+    }
+  }
+
+  const stories = merged
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, 10)
+    .map((story, index) => applyStoryDerivedFields(story, index));
 
   if (!stories.length) {
     throw new Error('News feed is temporarily empty.');
