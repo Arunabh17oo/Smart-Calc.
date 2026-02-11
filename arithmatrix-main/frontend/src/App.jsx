@@ -107,6 +107,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-top">
           <div className="app-header-brand">
+            <img className="app-brand-logo" src="/logo.png" alt="ArithMatrix logo" />
             <h1>ArithMatrix</h1>
             <span className="brand-pill">AI Math Studio</span>
           </div>
