@@ -1,9 +1,9 @@
 import { AssistantWidget } from '../components/AssistantWidget.jsx';
 
-export function AssistantPage() {
+export function AssistantPage({ storageKey }) {
   return (
     <section className="panel">
-      <AssistantWidget />
+      <AssistantWidget storageKey={storageKey} />
     </section>
   );
 }

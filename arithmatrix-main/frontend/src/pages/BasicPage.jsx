@@ -44,7 +44,7 @@ const KEY_INSERT = {
   φ: 'phi'
 };
 
-export function BasicPage() {
+export function BasicPage({ assistantStorageKey }) {
   const [params] = useSearchParams();
   const initialExpression = params.get('expression') || '';
   const [expression, setExpression] = useState(initialExpression);
@@ -239,7 +239,7 @@ export function BasicPage() {
       </div>
 
       <div className="main-assistant-block">
-        <AssistantWidget compact showOpenLink />
+        <AssistantWidget compact showOpenLink storageKey={assistantStorageKey} />
       </div>
     </section>
   );

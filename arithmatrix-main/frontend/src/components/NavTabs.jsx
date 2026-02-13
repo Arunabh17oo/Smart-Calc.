@@ -10,7 +10,8 @@ const TABS = [
   { to: '/ats', label: 'ATS' },
   { to: '/weather', label: 'Weather' },
   { to: '/assistant', label: 'Assistant' },
-  { to: '/history', label: 'History' }
+  { to: '/history', label: 'History' },
+  { to: '/admin', label: 'Admin' }
 ];
 
 export function NavTabs() {

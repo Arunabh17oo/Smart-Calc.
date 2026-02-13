@@ -8,6 +8,7 @@ import { healthRouter } from './routes/healthRoutes.js';
 import { historyRouter } from './routes/historyRoutes.js';
 import { marketRouter } from './routes/marketRoutes.js';
 import { newsRouter } from './routes/newsRoutes.js';
+import { subjectiveRouter } from './routes/subjectiveRoutes.js';
 import { translateRouter } from './routes/translateRoutes.js';
 import { weatherRouter } from './routes/weatherRoutes.js';
 
@@ -24,7 +25,7 @@ app.use(
     origin: CLIENT_ORIGIN
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: '40mb' }));
 
 app.use('/api/health', healthRouter);
 app.use('/api/history', historyRouter);
@@ -33,11 +34,13 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/assistant', assistantRouter);
 app.use('/api/market', marketRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/subjective', subjectiveRouter);
 app.use('/api/translate', translateRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ message: err?.message || 'Internal server error' });
+  const status = Number(err?.status) || 500;
+  res.status(status).json({ message: err?.message || 'Internal server error' });
 });
 
 async function bootstrap() {
