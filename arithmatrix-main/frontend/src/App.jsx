@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { InlineNavTabs } from './components/NavTabs.jsx';
 import { MarketPulseBar } from './components/MarketPulseBar.jsx';
 import { TechNewsSection } from './components/TechNewsSection.jsx';
@@ -18,8 +19,7 @@ import { WeatherPage } from './pages/WeatherPage.jsx';
 
 const AUTH_ACCOUNTS_STORAGE_KEY = 'arith-auth-accounts-v1';
 const AUTH_SESSION_STORAGE_KEY = 'arith-auth-session-v1';
-const GUEST_USAGE_START_STORAGE_KEY = 'arith-guest-usage-start-v1';
-const AUTH_POPUP_DELAY_MS = 3 * 60 * 1000;
+const AUTH_REMINDER_INTERVAL_MS = 5 * 60 * 1000;
 
 function normalizeRole(value) {
   const candidate = String(value || '').trim().toLowerCase();
@@ -117,6 +117,9 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [authNotice, setAuthNotice] = useState('');
   const [authPopupVisible, setAuthPopupVisible] = useState(false);
+  const [authPopupClosing, setAuthPopupClosing] = useState(false);
+  const authCloseTimerRef = useRef(null);
+  const authReminderTimerRef = useRef(null);
   const isHomeRoute = location.pathname === '/';
   const currentYear = new Date().getFullYear();
   const contactEmailAddress = 'Arunabh17oo@gmail.com';
@@ -180,33 +183,36 @@ export default function App() {
   }, [authAccounts, authSession]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
     if (isAuthenticated) {
+      if (authReminderTimerRef.current) {
+        window.clearTimeout(authReminderTimerRef.current);
+        authReminderTimerRef.current = null;
+      }
       setAuthPopupVisible(false);
-      window.localStorage.removeItem(GUEST_USAGE_START_STORAGE_KEY);
-      return undefined;
+      setAuthPopupClosing(false);
+      return;
     }
 
-    const existingStart = Number(window.localStorage.getItem(GUEST_USAGE_START_STORAGE_KEY) || 0);
-    const usageStart = Number.isFinite(existingStart) && existingStart > 0 ? existingStart : Date.now();
-
-    if (!existingStart) {
-      window.localStorage.setItem(GUEST_USAGE_START_STORAGE_KEY, String(usageStart));
+    if (!authReminderTimerRef.current) {
+      authReminderTimerRef.current = window.setTimeout(() => {
+        authReminderTimerRef.current = null;
+        openAuthPopup();
+      }, AUTH_REMINDER_INTERVAL_MS);
     }
-
-    const elapsed = Date.now() - usageStart;
-    const remaining = Math.max(0, AUTH_POPUP_DELAY_MS - elapsed);
-
-    if (remaining === 0) {
-      setAuthPopupVisible(true);
-      return undefined;
-    }
-
-    setAuthPopupVisible(false);
-    const timer = window.setTimeout(() => setAuthPopupVisible(true), remaining);
-    return () => window.clearTimeout(timer);
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    return () => {
+      if (authCloseTimerRef.current) {
+        window.clearTimeout(authCloseTimerRef.current);
+        authCloseTimerRef.current = null;
+      }
+      if (authReminderTimerRef.current) {
+        window.clearTimeout(authReminderTimerRef.current);
+        authReminderTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || typeof window === 'undefined') return;
@@ -276,6 +282,19 @@ export default function App() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!authPopupVisible) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeAuthPopup();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [authPopupVisible, authPopupClosing]);
+
   function onContactSubmit(event) {
     event.preventDefault();
 
@@ -316,10 +335,20 @@ export default function App() {
   }
 
   function createSessionForAccount(account) {
+    if (authCloseTimerRef.current) {
+      window.clearTimeout(authCloseTimerRef.current);
+      authCloseTimerRef.current = null;
+    }
+    if (authReminderTimerRef.current) {
+      window.clearTimeout(authReminderTimerRef.current);
+      authReminderTimerRef.current = null;
+    }
     setAuthSession({
       accountId: account.id,
       loginAt: new Date().toISOString()
     });
+    setAuthPopupVisible(false);
+    setAuthPopupClosing(false);
     setAuthForm((prev) => ({
       ...prev,
       loginIdentifier: '',
@@ -451,6 +480,14 @@ export default function App() {
     setAuthMode('login');
     setAuthError('');
     setAuthNotice('');
+    if (authReminderTimerRef.current) {
+      window.clearTimeout(authReminderTimerRef.current);
+      authReminderTimerRef.current = null;
+    }
+    authReminderTimerRef.current = window.setTimeout(() => {
+      authReminderTimerRef.current = null;
+      openAuthPopup();
+    }, AUTH_REMINDER_INTERVAL_MS);
   }
 
   function handleAdminRoleChange(accountId, role) {
@@ -467,8 +504,249 @@ export default function App() {
     );
   }
 
+  function openAuthPopup() {
+    if (authCloseTimerRef.current) {
+      window.clearTimeout(authCloseTimerRef.current);
+      authCloseTimerRef.current = null;
+    }
+    if (authReminderTimerRef.current) {
+      window.clearTimeout(authReminderTimerRef.current);
+      authReminderTimerRef.current = null;
+    }
+    setAuthMode('login');
+    setAuthError('');
+    setAuthNotice('');
+    setAuthPopupClosing(false);
+    setAuthPopupVisible(true);
+  }
+
+  function closeAuthPopup() {
+    if (!authPopupVisible || authPopupClosing) return;
+    setAuthPopupClosing(true);
+    authCloseTimerRef.current = window.setTimeout(() => {
+      setAuthPopupVisible(false);
+      setAuthPopupClosing(false);
+      authCloseTimerRef.current = null;
+
+      if (!isAuthenticated) {
+        if (authReminderTimerRef.current) {
+          window.clearTimeout(authReminderTimerRef.current);
+          authReminderTimerRef.current = null;
+        }
+        authReminderTimerRef.current = window.setTimeout(() => {
+          authReminderTimerRef.current = null;
+          openAuthPopup();
+        }, AUTH_REMINDER_INTERVAL_MS);
+      }
+    }, 240);
+  }
+
+  const authModal =
+    authPopupVisible && !isAuthenticated && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className={`auth-overlay ${authPopupClosing ? 'auth-overlay-closing' : 'auth-overlay-open'}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-modal-title"
+            onClick={closeAuthPopup}
+          >
+            <section
+              className={`auth-modal ${authPopupClosing ? 'auth-modal-closing' : 'auth-modal-open'}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="auth-modal-head">
+                <div className="auth-modal-head-brand">
+                  <span className="auth-modal-head-g" aria-hidden="true">
+                    G
+                  </span>
+                  <p>ArithMatrix Account</p>
+                </div>
+                <button
+                  type="button"
+                  className="auth-close-btn"
+                  aria-label="Close login modal"
+                  onClick={closeAuthPopup}
+                >
+                  X
+                </button>
+              </div>
+
+              <div className="auth-modal-content">
+                <div className="auth-copy-grid">
+                  <div className="auth-copy-block">
+                    <h2 id="auth-modal-title">
+                      {authMode === 'login'
+                        ? 'ArithMatrix Login'
+                        : 'Create your ArithMatrix account'}
+                    </h2>
+                    <p>
+                      {authMode === 'login'
+                        ? 'Fast, secure access with your email or phone. Your preferences stay synced on this device.'
+                        : 'Create your profile in seconds and keep your tools, tests, and assistant history personalized.'}
+                    </p>
+                  </div>
+                  <div className="auth-copy-visual" aria-hidden="true">
+                    <span className="auth-copy-bubble auth-copy-bubble-a" />
+                    <span className="auth-copy-bubble auth-copy-bubble-b" />
+                    <span className="auth-copy-bubble auth-copy-bubble-c" />
+                    <span className="auth-copy-bubble auth-copy-bubble-d" />
+                    <span className="auth-copy-bubble auth-copy-bubble-e" />
+                  </div>
+                </div>
+
+                <div className="auth-mode-toggle">
+                  <button
+                    type="button"
+                    className={`pill-btn ${authMode === 'login' ? 'pill-btn-active' : ''}`}
+                    onClick={() => {
+                      setAuthMode('login');
+                      setAuthError('');
+                      setAuthNotice('');
+                    }}
+                  >
+                    Login
+                  </button>
+                  <button
+                    type="button"
+                    className={`pill-btn ${authMode === 'signup' ? 'pill-btn-active' : ''}`}
+                    onClick={() => {
+                      setAuthMode('signup');
+                      setAuthError('');
+                      setAuthNotice('');
+                    }}
+                  >
+                    Signup
+                  </button>
+                </div>
+
+                {authMode === 'login' ? (
+                  <form className="auth-form" onSubmit={handleLoginSubmit}>
+                    <label className="auth-field" htmlFor="auth-login-identifier">
+                      <span>Email or Mobile</span>
+                      <input
+                        id="auth-login-identifier"
+                        className="text-input"
+                        value={authForm.loginIdentifier}
+                        onChange={(event) => updateAuthField('loginIdentifier', event.target.value)}
+                        placeholder="name@example.com or 9876543210"
+                      />
+                    </label>
+
+                    <label className="auth-field" htmlFor="auth-login-password">
+                      <span>Password</span>
+                      <input
+                        id="auth-login-password"
+                        className="text-input"
+                        type="password"
+                        value={authForm.loginPassword}
+                        onChange={(event) => updateAuthField('loginPassword', event.target.value)}
+                        placeholder="Enter password"
+                      />
+                    </label>
+
+                    <button type="submit" className="action-btn auth-submit-btn">
+                      Continue
+                    </button>
+                  </form>
+                ) : (
+                  <form className="auth-form" onSubmit={handleSignupSubmit}>
+                    <label className="auth-field" htmlFor="auth-signup-name">
+                      <span>Full Name</span>
+                      <input
+                        id="auth-signup-name"
+                        className="text-input"
+                        value={authForm.signupName}
+                        onChange={(event) => updateAuthField('signupName', event.target.value)}
+                        placeholder="Your name"
+                      />
+                    </label>
+
+                    <div className="auth-field-grid">
+                      <label className="auth-field" htmlFor="auth-signup-email">
+                        <span>Email</span>
+                        <input
+                          id="auth-signup-email"
+                          className="text-input"
+                          type="email"
+                          value={authForm.signupEmail}
+                          onChange={(event) => updateAuthField('signupEmail', event.target.value)}
+                          placeholder="you@example.com"
+                        />
+                      </label>
+
+                      <label className="auth-field" htmlFor="auth-signup-mobile">
+                        <span>Mobile</span>
+                        <input
+                          id="auth-signup-mobile"
+                          className="text-input"
+                          value={authForm.signupMobile}
+                          onChange={(event) => updateAuthField('signupMobile', event.target.value)}
+                          placeholder="9876543210"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="auth-field-grid">
+                      <label className="auth-field" htmlFor="auth-signup-password">
+                        <span>Password</span>
+                        <input
+                          id="auth-signup-password"
+                          className="text-input"
+                          type="password"
+                          value={authForm.signupPassword}
+                          onChange={(event) => updateAuthField('signupPassword', event.target.value)}
+                          placeholder="Create password"
+                        />
+                      </label>
+
+                      <label className="auth-field" htmlFor="auth-signup-confirm-password">
+                        <span>Confirm Password</span>
+                        <input
+                          id="auth-signup-confirm-password"
+                          className="text-input"
+                          type="password"
+                          value={authForm.signupConfirmPassword}
+                          onChange={(event) => updateAuthField('signupConfirmPassword', event.target.value)}
+                          placeholder="Repeat password"
+                        />
+                      </label>
+                    </div>
+
+                    <button type="submit" className="action-btn auth-submit-btn">
+                      Create Account
+                    </button>
+                  </form>
+                )}
+
+                <div className="auth-social-row">
+                  <button
+                    type="button"
+                    className="ghost-btn auth-social-btn"
+                    onClick={() => handleSocialAuth('google')}
+                  >
+                    Continue with Google
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn auth-social-btn"
+                    onClick={() => handleSocialAuth('facebook')}
+                  >
+                    Continue with Facebook
+                  </button>
+                </div>
+                {authError ? <p className="error-text">{authError}</p> : null}
+                {authNotice ? <p className="hint-text">{authNotice}</p> : null}
+              </div>
+            </section>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
-    <div className={`app-shell ${isHomeRoute ? 'app-shell-home' : ''}`}>
+    <>
+      <div className={`app-shell ${isHomeRoute ? 'app-shell-home' : ''}`}>
       <div className="bg-grid" aria-hidden="true" />
       <div className="bg-orb bg-orb-a" aria-hidden="true" />
       <div className="bg-orb bg-orb-b" aria-hidden="true" />
@@ -492,8 +770,8 @@ export default function App() {
                 </button>
               </>
             ) : (
-              <button type="button" className="ghost-btn" onClick={() => setAuthPopupVisible(true)}>
-                Login / Signup
+              <button type="button" className="ghost-btn" onClick={openAuthPopup}>
+                Login
               </button>
             )}
             <TranslatePopup placement="jump" jumpTargetId="translation-operations" />
@@ -663,174 +941,8 @@ export default function App() {
         </footer>
       </div>
 
-      {authPopupVisible && !isAuthenticated ? (
-        <div className="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-          <section className="auth-modal">
-            <div className="auth-modal-left">
-              <img className="auth-modal-logo" src="/logo.png" alt="ArithMatrix logo" />
-              <p className="auth-modal-kicker">ArithMatrix Access</p>
-              <h2 id="auth-modal-title">Secure Login Portal</h2>
-              <p>
-                Sign in to continue with personalized data. Assistant chats and subjective test
-                records remain attached to your account.
-              </p>
-              <div className="auth-highlight-list">
-                <span>Personalized Subjective Tests</span>
-                <span>Per-user Assistant Memory</span>
-                <span>Teacher + Student Workflow</span>
-              </div>
-            </div>
-
-            <div className="auth-modal-right">
-              <div className="auth-mode-toggle">
-                <button
-                  type="button"
-                  className={`pill-btn ${authMode === 'login' ? 'pill-btn-active' : ''}`}
-                  onClick={() => {
-                    setAuthMode('login');
-                    setAuthError('');
-                    setAuthNotice('');
-                  }}
-                >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  className={`pill-btn ${authMode === 'signup' ? 'pill-btn-active' : ''}`}
-                  onClick={() => {
-                    setAuthMode('signup');
-                    setAuthError('');
-                    setAuthNotice('');
-                  }}
-                >
-                  Signup
-                </button>
-              </div>
-
-              {authMode === 'login' ? (
-                <form className="auth-form" onSubmit={handleLoginSubmit}>
-                  <label className="auth-field" htmlFor="auth-login-identifier">
-                    <span>Email or Mobile</span>
-                    <input
-                      id="auth-login-identifier"
-                      className="text-input"
-                      value={authForm.loginIdentifier}
-                      onChange={(event) => updateAuthField('loginIdentifier', event.target.value)}
-                      placeholder="name@example.com or 9876543210"
-                    />
-                  </label>
-
-                  <label className="auth-field" htmlFor="auth-login-password">
-                    <span>Password</span>
-                    <input
-                      id="auth-login-password"
-                      className="text-input"
-                      type="password"
-                      value={authForm.loginPassword}
-                      onChange={(event) => updateAuthField('loginPassword', event.target.value)}
-                      placeholder="Enter password"
-                    />
-                  </label>
-
-                  <button type="submit" className="action-btn auth-submit-btn">
-                    Login
-                  </button>
-                </form>
-              ) : (
-                <form className="auth-form" onSubmit={handleSignupSubmit}>
-                  <label className="auth-field" htmlFor="auth-signup-name">
-                    <span>Full Name</span>
-                    <input
-                      id="auth-signup-name"
-                      className="text-input"
-                      value={authForm.signupName}
-                      onChange={(event) => updateAuthField('signupName', event.target.value)}
-                      placeholder="Your name"
-                    />
-                  </label>
-
-                  <div className="auth-field-grid">
-                    <label className="auth-field" htmlFor="auth-signup-email">
-                      <span>Email</span>
-                      <input
-                        id="auth-signup-email"
-                        className="text-input"
-                        type="email"
-                        value={authForm.signupEmail}
-                        onChange={(event) => updateAuthField('signupEmail', event.target.value)}
-                        placeholder="you@example.com"
-                      />
-                    </label>
-
-                    <label className="auth-field" htmlFor="auth-signup-mobile">
-                      <span>Mobile</span>
-                      <input
-                        id="auth-signup-mobile"
-                        className="text-input"
-                        value={authForm.signupMobile}
-                        onChange={(event) => updateAuthField('signupMobile', event.target.value)}
-                        placeholder="9876543210"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="auth-field-grid">
-                    <label className="auth-field" htmlFor="auth-signup-password">
-                      <span>Password</span>
-                      <input
-                        id="auth-signup-password"
-                        className="text-input"
-                        type="password"
-                        value={authForm.signupPassword}
-                        onChange={(event) => updateAuthField('signupPassword', event.target.value)}
-                        placeholder="Create password"
-                      />
-                    </label>
-
-                    <label className="auth-field" htmlFor="auth-signup-confirm-password">
-                      <span>Confirm Password</span>
-                      <input
-                        id="auth-signup-confirm-password"
-                        className="text-input"
-                        type="password"
-                        value={authForm.signupConfirmPassword}
-                        onChange={(event) => updateAuthField('signupConfirmPassword', event.target.value)}
-                        placeholder="Repeat password"
-                      />
-                    </label>
-                  </div>
-
-                  <button type="submit" className="action-btn auth-submit-btn">
-                    Create Account
-                  </button>
-                </form>
-              )}
-
-              <div className="auth-social-row">
-                <button type="button" className="ghost-btn auth-social-btn" onClick={() => handleSocialAuth('google')}>
-                  Continue with Google
-                </button>
-                <button
-                  type="button"
-                  className="ghost-btn auth-social-btn"
-                  onClick={() => handleSocialAuth('facebook')}
-                >
-                  Continue with Facebook
-                </button>
-              </div>
-
-              <p className="hint-text auth-persist-note">
-                Account data is stored locally on this device and mapped per login ID.
-              </p>
-              <p className="hint-text auth-persist-note">
-                Default admin login: admin@arithmatrix.com / Admin@123
-              </p>
-              {authError ? <p className="error-text">{authError}</p> : null}
-              {authNotice ? <p className="hint-text">{authNotice}</p> : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
-    </div>
+      </div>
+      {authModal}
+    </>
   );
 }
