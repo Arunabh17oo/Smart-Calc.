@@ -19,7 +19,9 @@ import { WeatherPage } from './pages/WeatherPage.jsx';
 
 const AUTH_ACCOUNTS_STORAGE_KEY = 'arith-auth-accounts-v1';
 const AUTH_SESSION_STORAGE_KEY = 'arith-auth-session-v1';
-const AUTH_REMINDER_INTERVAL_MS = 5 * 60 * 1000;
+const AUTH_REMINDER_INTERVAL_MS = 4 * 60 * 1000;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_GSI_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
 
 function normalizeRole(value) {
   const candidate = String(value || '').trim().toLowerCase();
@@ -53,6 +55,7 @@ function loadAuthAccounts() {
     .map((item) => ({
       id: String(item.id),
       provider: String(item.provider || 'local'),
+      providerUserId: String(item.providerUserId || ''),
       fullName: String(item.fullName || ''),
       email: normalizeEmail(item.email),
       mobile: normalizeMobile(item.mobile),
@@ -66,6 +69,7 @@ function loadAuthAccounts() {
     normalized.unshift({
       id: 'sys-admin-1',
       provider: 'system',
+      providerUserId: '',
       fullName: 'ArithMatrix Admin',
       email: 'admin@arithmatrix.com',
       mobile: '',
@@ -95,6 +99,37 @@ function buildAccountDisplayName(account) {
   if (account.email) return account.email;
   if (account.mobile) return account.mobile;
   return 'User';
+}
+
+function loadScriptOnce({ id, src }) {
+  if (typeof document === 'undefined') {
+    return Promise.reject(new Error('Script loading is unavailable outside browser.'));
+  }
+
+  const existing = document.getElementById(id);
+  if (existing) {
+    if (existing.dataset.loaded === 'true') {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.id = id;
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
 }
 
 export default function App() {
@@ -392,6 +427,7 @@ export default function App() {
     const account = {
       id: `acct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       provider: 'local',
+      providerUserId: '',
       fullName: fullName || 'ArithMatrix User',
       email,
       mobile,
@@ -433,46 +469,106 @@ export default function App() {
     setAuthNotice('Login successful.');
   }
 
-  function handleSocialAuth(provider) {
-    const providerName = provider === 'google' ? 'Google' : 'Facebook';
-    const signupEmail = normalizeEmail(authForm.signupEmail);
-    const loginIdentifier = String(authForm.loginIdentifier || '').trim();
-    const loginIsEmail = loginIdentifier.includes('@');
-    const loginEmail = loginIsEmail ? normalizeEmail(loginIdentifier) : '';
-    const signupMobile = normalizeMobile(authForm.signupMobile);
-    const loginMobile = !loginIsEmail ? normalizeMobile(loginIdentifier) : '';
-    const email = signupEmail || loginEmail;
-    const mobile = signupMobile || loginMobile;
-    const fallbackEmail = `${provider}.user@arithmatrix.app`;
-    const resolvedEmail = email || fallbackEmail;
-
-    let account = authAccounts.find(
-      (item) =>
-        item.provider === provider &&
-        (
-          (email && item.email === email) ||
-          (mobile && item.mobile === mobile) ||
-          (!email && !mobile && item.email === fallbackEmail)
-        )
-    );
-
-    if (!account) {
-      account = {
-        id: `acct-${provider}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        provider,
-        fullName: authForm.signupName.trim() || `${providerName} User`,
-        email: resolvedEmail,
-        mobile,
-        password: '',
-        role: 'student',
-        createdAt: new Date().toISOString()
-      };
-      setAuthAccounts((prev) => [...prev, account]);
+  async function requestGoogleProfile() {
+    if (!GOOGLE_CLIENT_ID) {
+      throw new Error('Google login is not configured. Add VITE_GOOGLE_CLIENT_ID in frontend/.env.');
     }
 
-    createSessionForAccount(account);
+    await loadScriptOnce({ id: 'arith-google-gsi-sdk', src: GOOGLE_GSI_SCRIPT_SRC });
+
+    if (!window.google?.accounts?.oauth2?.initTokenClient) {
+      throw new Error('Google login SDK failed to initialize.');
+    }
+
+    const tokenResponse = await new Promise((resolve, reject) => {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'openid email profile',
+        callback: (response) => {
+          if (!response || response.error) {
+            reject(new Error(response?.error_description || response?.error || 'Google login was cancelled.'));
+            return;
+          }
+          resolve(response);
+        }
+      });
+
+      try {
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    const accessToken = String(tokenResponse?.access_token || '');
+    if (!accessToken) {
+      throw new Error('Google login did not return an access token.');
+    }
+
+    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!profileResponse.ok) {
+      throw new Error('Unable to fetch Google account profile.');
+    }
+
+    const profile = await profileResponse.json();
+    return {
+      providerUserId: String(profile?.sub || ''),
+      fullName: String(profile?.name || 'Google User'),
+      email: normalizeEmail(profile?.email),
+      mobile: ''
+    };
+  }
+
+  async function handleSocialAuth() {
+    const provider = 'google';
+    const providerName = 'Google';
     setAuthError('');
-    setAuthNotice(`${providerName} login completed.`);
+    setAuthNotice('');
+
+    try {
+      const socialProfile = await requestGoogleProfile();
+      const normalizedEmail = normalizeEmail(socialProfile.email);
+
+      let account = authAccounts.find(
+        (item) =>
+          item.provider === provider &&
+          (
+            (socialProfile.providerUserId && item.providerUserId === socialProfile.providerUserId) ||
+            (normalizedEmail && item.email === normalizedEmail)
+          )
+      );
+
+      if (!account) {
+        account = {
+          id: `acct-${provider}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          provider,
+          providerUserId: socialProfile.providerUserId,
+          fullName: socialProfile.fullName || `${providerName} User`,
+          email: normalizedEmail || `${provider}.user@arithmatrix.app`,
+          mobile: '',
+          password: '',
+          role: 'student',
+          createdAt: new Date().toISOString()
+        };
+        setAuthAccounts((prev) => [...prev, account]);
+      } else {
+        const mergedAccount = {
+          ...account,
+          providerUserId: account.providerUserId || socialProfile.providerUserId,
+          fullName: account.fullName || socialProfile.fullName,
+          email: account.email || normalizedEmail
+        };
+        account = mergedAccount;
+        setAuthAccounts((prev) => prev.map((item) => (item.id === mergedAccount.id ? mergedAccount : item)));
+      }
+
+      createSessionForAccount(account);
+      setAuthNotice(`${providerName} login successful.`);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Google login failed.');
+    }
   }
 
   function handleLogout() {
@@ -723,16 +819,9 @@ export default function App() {
                   <button
                     type="button"
                     className="ghost-btn auth-social-btn"
-                    onClick={() => handleSocialAuth('google')}
+                    onClick={handleSocialAuth}
                   >
                     Continue with Google
-                  </button>
-                  <button
-                    type="button"
-                    className="ghost-btn auth-social-btn"
-                    onClick={() => handleSocialAuth('facebook')}
-                  >
-                    Continue with Facebook
                   </button>
                 </div>
                 {authError ? <p className="error-text">{authError}</p> : null}
