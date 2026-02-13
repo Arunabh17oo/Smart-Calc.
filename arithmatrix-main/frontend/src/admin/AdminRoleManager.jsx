@@ -11,7 +11,18 @@ function roleBadgeLabel(role) {
   return 'Student';
 }
 
-export function AdminRoleManager({ currentAccount, accounts, onRoleChange }) {
+function toTimestamp(value) {
+  const time = new Date(String(value || '')).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function formatJoinedAt(value) {
+  const time = toTimestamp(value);
+  if (!time) return 'Unknown';
+  return new Date(time).toLocaleString();
+}
+
+export function AdminRoleManager({ currentAccount, accounts, onRoleChange, onDeleteAccount }) {
   const currentRole = safeRole(currentAccount?.role);
 
   if (!currentAccount) {
@@ -23,19 +34,30 @@ export function AdminRoleManager({ currentAccount, accounts, onRoleChange }) {
   }
 
   const sortedAccounts = [...(accounts || [])].sort((a, b) => {
-    const aRole = safeRole(a?.role);
-    const bRole = safeRole(b?.role);
-    if (aRole === 'admin' && bRole !== 'admin') return -1;
-    if (bRole === 'admin' && aRole !== 'admin') return 1;
-    return String(a?.createdAt || '').localeCompare(String(b?.createdAt || ''));
+    const aIsSystemAdmin = a?.id === 'sys-admin-1';
+    const bIsSystemAdmin = b?.id === 'sys-admin-1';
+    if (aIsSystemAdmin && !bIsSystemAdmin) return 1;
+    if (bIsSystemAdmin && !aIsSystemAdmin) return -1;
+
+    const aCreated = toTimestamp(a?.createdAt);
+    const bCreated = toTimestamp(b?.createdAt);
+    return bCreated - aCreated;
   });
+
+  const latestSignup = sortedAccounts.find((account) => account?.id !== 'sys-admin-1');
 
   return (
     <div className="admin-role-block">
       <p className="hint-text">
-        Admin can assign `student` or `teacher` roles. Teacher role unlocks teacher tools in
-        Subjective Tests.
+        Latest signups are shown first. Assign `student` or `teacher` roles based on recent
+        registrations.
       </p>
+      {latestSignup ? (
+        <p className="hint-text">
+          Latest signup: {latestSignup.fullName || 'User'} ({latestSignup.email || latestSignup.mobile || latestSignup.id}) at{' '}
+          {formatJoinedAt(latestSignup.createdAt)}
+        </p>
+      ) : null}
 
       <div className="admin-role-table-wrap">
         <table className="admin-role-table">
@@ -43,8 +65,9 @@ export function AdminRoleManager({ currentAccount, accounts, onRoleChange }) {
             <tr>
               <th>Name</th>
               <th>Email / Mobile</th>
+              <th>Joined</th>
               <th>Current Role</th>
-              <th>Set Role</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -52,11 +75,13 @@ export function AdminRoleManager({ currentAccount, accounts, onRoleChange }) {
               const role = safeRole(account.role);
               const isSystemAdmin = account.id === 'sys-admin-1' || role === 'admin';
               const identity = account.email || account.mobile || account.id;
+              const canDelete = !isSystemAdmin;
 
               return (
                 <tr key={account.id}>
                   <td>{account.fullName || 'User'}</td>
                   <td>{identity}</td>
+                  <td>{formatJoinedAt(account.createdAt)}</td>
                   <td>
                     <span className={`admin-role-pill admin-role-pill-${role}`}>{roleBadgeLabel(role)}</span>
                   </td>
@@ -64,14 +89,29 @@ export function AdminRoleManager({ currentAccount, accounts, onRoleChange }) {
                     {isSystemAdmin ? (
                       <span className="hint-text">Locked</span>
                     ) : (
-                      <select
-                        className="subjective-level-select"
-                        value={role}
-                        onChange={(event) => onRoleChange(account.id, event.target.value)}
-                      >
-                        <option value="student">Student</option>
-                        <option value="teacher">Teacher</option>
-                      </select>
+                      <div className="admin-role-actions">
+                        <select
+                          className="subjective-level-select"
+                          value={role}
+                          onChange={(event) => onRoleChange(account.id, event.target.value)}
+                        >
+                          <option value="student">Student</option>
+                          <option value="teacher">Teacher</option>
+                        </select>
+                        <button
+                          type="button"
+                          className="danger-btn admin-delete-btn"
+                          onClick={() => {
+                            const confirmed = window.confirm(
+                              `Delete user "${account.fullName || 'User'}" (${identity})?`
+                            );
+                            if (confirmed) onDeleteAccount?.(account.id);
+                          }}
+                          disabled={!canDelete}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>

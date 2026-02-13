@@ -132,6 +132,35 @@ function loadScriptOnce({ id, src }) {
   });
 }
 
+function decodeBase64Url(value) {
+  const normalized = String(value || '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4 || 4)) % 4);
+  const decoded = atob(padded);
+
+  try {
+    const escaped = decoded
+      .split('')
+      .map((character) => `%${character.charCodeAt(0).toString(16).padStart(2, '0')}`)
+      .join('');
+    return decodeURIComponent(escaped);
+  } catch (_error) {
+    return decoded;
+  }
+}
+
+function parseJwtPayload(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length < 2) return null;
+
+  try {
+    return JSON.parse(decodeBase64Url(parts[1]));
+  } catch (_error) {
+    return null;
+  }
+}
+
 export default function App() {
   const location = useLocation();
   const [contactEmail, setContactEmail] = useState('');
@@ -469,56 +498,93 @@ export default function App() {
     setAuthNotice('Login successful.');
   }
 
-  async function requestGoogleProfile() {
-    if (!GOOGLE_CLIENT_ID) {
-      throw new Error('Google login is not configured. Add VITE_GOOGLE_CLIENT_ID in frontend/.env.');
+  async function requestGoogleProfileWithCredential() {
+    if (!window.google?.accounts?.id?.initialize || !window.google?.accounts?.id?.prompt) {
+      throw new Error('Google Identity prompt is unavailable in this browser.');
     }
 
-    await loadScriptOnce({ id: 'arith-google-gsi-sdk', src: GOOGLE_GSI_SCRIPT_SRC });
+    const credentialResponse = await new Promise((resolve, reject) => {
+      let settled = false;
+      const timeout = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error('Google sign-in timed out. Please try again.'));
+      }, 20000);
 
-    if (!window.google?.accounts?.oauth2?.initTokenClient) {
-      throw new Error('Google login SDK failed to initialize.');
-    }
+      const finalizeReject = (message) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        reject(new Error(message));
+      };
 
-    const tokenResponse = await new Promise((resolve, reject) => {
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        scope: 'openid email profile',
+        auto_select: false,
         callback: (response) => {
-          if (!response || response.error) {
-            reject(new Error(response?.error_description || response?.error || 'Google login was cancelled.'));
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeout);
+          if (!response?.credential) {
+            reject(new Error('Google sign-in did not return credential.'));
             return;
           }
           resolve(response);
         }
       });
 
-      try {
-        tokenClient.requestAccessToken({ prompt: 'select_account' });
-      } catch (error) {
-        reject(error);
-      }
+      window.google.accounts.id.prompt((notification) => {
+        if (settled) return;
+        if (notification?.isNotDisplayed?.()) {
+          const reason = notification?.getNotDisplayedReason?.() || 'Prompt not displayed.';
+          finalizeReject(`Google sign-in unavailable: ${reason}`);
+          return;
+        }
+        if (notification?.isSkippedMoment?.()) {
+          const reason = notification?.getSkippedReason?.() || 'Prompt skipped.';
+          finalizeReject(`Google sign-in skipped: ${reason}`);
+          return;
+        }
+        if (notification?.isDismissedMoment?.()) {
+          const reason = notification?.getDismissedReason?.() || 'Prompt dismissed.';
+          finalizeReject(`Google sign-in cancelled: ${reason}`);
+        }
+      });
     });
 
-    const accessToken = String(tokenResponse?.access_token || '');
-    if (!accessToken) {
-      throw new Error('Google login did not return an access token.');
+    const payload = parseJwtPayload(credentialResponse?.credential);
+    if (!payload) {
+      throw new Error('Unable to read Google account details from credential response.');
     }
 
-    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    if (!profileResponse.ok) {
-      throw new Error('Unable to fetch Google account profile.');
-    }
-
-    const profile = await profileResponse.json();
     return {
-      providerUserId: String(profile?.sub || ''),
-      fullName: String(profile?.name || 'Google User'),
-      email: normalizeEmail(profile?.email),
+      providerUserId: String(payload?.sub || ''),
+      fullName: String(payload?.name || 'Google User'),
+      email: normalizeEmail(payload?.email),
       mobile: ''
     };
+  }
+
+  async function requestGoogleProfile() {
+    if (!GOOGLE_CLIENT_ID) {
+      throw new Error('Google login is not configured. Add VITE_GOOGLE_CLIENT_ID in frontend/.env.');
+    }
+
+    await loadScriptOnce({ id: 'arith-google-gsi-sdk', src: GOOGLE_GSI_SCRIPT_SRC });
+    try {
+      return await requestGoogleProfileWithCredential();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google login failed.';
+      const normalized = message.toLowerCase();
+
+      if (normalized.includes('origin') || normalized.includes('client') || normalized.includes('invalid')) {
+        throw new Error(
+          `Google OAuth config mismatch for ${window.location.origin}. Add this URL to Authorized JavaScript origins in your Google OAuth Web client and retry.`
+        );
+      }
+
+      throw new Error(message);
+    }
   }
 
   async function handleSocialAuth() {
@@ -598,6 +664,21 @@ export default function App() {
           : item
       )
     );
+  }
+
+  function handleAdminDeleteAccount(accountId) {
+    const targetId = String(accountId || '');
+    if (!targetId || targetId === 'sys-admin-1') return;
+
+    const target = authAccounts.find((item) => item.id === targetId);
+    if (!target) return;
+    if (normalizeRole(target.role) === 'admin') return;
+
+    setAuthAccounts((prev) => prev.filter((item) => item.id !== targetId));
+
+    if (authSession?.accountId === targetId) {
+      setAuthSession(null);
+    }
   }
 
   function openAuthPopup() {
@@ -929,11 +1010,16 @@ export default function App() {
               <Route
                 path="/admin"
                 element={
-                  <AdminPage
-                    currentAccount={currentAccount}
-                    accounts={authAccounts}
-                    onRoleChange={handleAdminRoleChange}
-                  />
+                  currentUserRole === 'admin' ? (
+                    <AdminPage
+                      currentAccount={currentAccount}
+                      accounts={authAccounts}
+                      onRoleChange={handleAdminRoleChange}
+                      onDeleteAccount={handleAdminDeleteAccount}
+                    />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
                 }
               />
               <Route path="*" element={<Navigate to="/" replace />} />
@@ -941,7 +1027,7 @@ export default function App() {
           </div>
         </main>
 
-        <InlineNavTabs />
+        <InlineNavTabs showAdminTab={currentUserRole === 'admin'} />
         <section id="translation-operations" className="translate-operations-block" aria-label="Translation Operations">
           <TranslatePopup placement="inline" />
         </section>

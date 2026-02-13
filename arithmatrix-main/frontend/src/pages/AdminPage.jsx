@@ -1,6 +1,6 @@
 import { AdminRoleManager } from '../admin/AdminRoleManager.jsx';
 
-export function AdminPage({ currentAccount, accounts, onRoleChange }) {
+export function AdminPage({ currentAccount, accounts, onRoleChange, onDeleteAccount }) {
   return (
     <section className="panel">
       <div className="panel-row panel-row-space">
@@ -10,6 +10,7 @@ export function AdminPage({ currentAccount, accounts, onRoleChange }) {
         currentAccount={currentAccount}
         accounts={accounts}
         onRoleChange={onRoleChange}
+        onDeleteAccount={onDeleteAccount}
       />
     </section>
   );

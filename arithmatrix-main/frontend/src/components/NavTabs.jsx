@@ -14,10 +14,16 @@ const TABS = [
   { to: '/admin', label: 'Admin' }
 ];
 
-export function NavTabs() {
+function buildTabs(showAdminTab) {
+  if (showAdminTab) return TABS;
+  return TABS.filter((tab) => tab.to !== '/admin');
+}
+
+export function NavTabs({ showAdminTab = false }) {
+  const tabs = buildTabs(showAdminTab);
   return (
     <nav className="tabs" aria-label="Primary navigation">
-      {TABS.map((tab) => (
+      {tabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
@@ -31,10 +37,11 @@ export function NavTabs() {
   );
 }
 
-export function InlineNavTabs() {
+export function InlineNavTabs({ showAdminTab = false }) {
+  const tabs = buildTabs(showAdminTab);
   return (
     <nav className="tabs tabs-inline" aria-label="Primary navigation">
-      {TABS.map((tab) => (
+      {tabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
