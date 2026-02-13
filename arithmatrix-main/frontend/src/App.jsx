@@ -10,6 +10,7 @@ import { BasicPage } from './pages/BasicPage.jsx';
 import { CameraPage } from './pages/CameraPage.jsx';
 import { CurrencyPage } from './pages/CurrencyPage.jsx';
 import { HistoryPage } from './pages/HistoryPage.jsx';
+import { SubjectivePage } from './pages/SubjectivePage.jsx';
 import { UnitPage } from './pages/UnitPage.jsx';
 import { VoicePage } from './pages/VoicePage.jsx';
 import { WeatherPage } from './pages/WeatherPage.jsx';
@@ -26,6 +27,7 @@ export default function App() {
   const newsTopic =
     {
       '/': 'upcoming-tech',
+      '/subjective': 'education',
       '/voice': 'voice',
       '/camera': 'camera',
       '/unit': 'upcoming-tech',
@@ -117,9 +119,10 @@ export default function App() {
         </div>
         <p>
           Smart calculator with voice, camera OCR, unit conversion, currency, weather, ATS score
-          checker, AI assistant, and history.
+          checker, subjective tests, AI assistant, and history.
         </p>
         <div className="hero-chip-row">
+          <span className="hero-chip">Subjective Tests</span>
           <span className="hero-chip">Voice</span>
           <span className="hero-chip">Camera OCR</span>
           <span className="hero-chip">Unit Converter</span>
@@ -135,6 +138,7 @@ export default function App() {
           <span>System Online</span>
         </div>
         <div className="status-metrics">
+          <span className="status-tag">Test Engine</span>
           <span className="status-tag">Voice Ready</span>
           <span className="status-tag">OCR Ready</span>
           <span className="status-tag">Unit Engine</span>
@@ -151,6 +155,7 @@ export default function App() {
           <div className="route-stage" key={location.pathname}>
             <Routes location={location}>
               <Route path="/" element={<BasicPage />} />
+              <Route path="/subjective" element={<SubjectivePage />} />
               <Route path="/voice" element={<VoicePage />} />
               <Route path="/camera" element={<CameraPage />} />
               <Route path="/unit" element={<UnitPage />} />

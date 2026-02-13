@@ -28,6 +28,7 @@ This repository contains:
 - Resume upload-to-text flow for ATS:
   - Image resumes scanned with OCR (Tesseract)
   - PDF content parsing with filtering to avoid raw `%PDF/obj/xref` noise in the Resume Text box
+  - Resume text auto-clears 3 minutes after ATS score analysis
 - History storage in MongoDB by source: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
 - Translation operations panel with top-bar jump button
 - Footer with:
@@ -167,6 +168,9 @@ Base URL: `http://localhost:5001/api`
 - History source values currently stored in MongoDB: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`.
 
 ## Recent Updates
+
+Updated on **February 12, 2026**:
+- ATS Score Checker now auto-clears Resume Text 3 minutes after score analysis completes.
 
 Updated on **February 11, 2026**:
 - Added ATS Score Checker route and nav tab link.

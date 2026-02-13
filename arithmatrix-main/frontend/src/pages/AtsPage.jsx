@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Tesseract from 'tesseract.js';
 import {
   ATS_SAMPLE_JOB_DESCRIPTION,
@@ -6,6 +6,8 @@ import {
   calculateAtsScore,
   parseResumeFileText
 } from '../utils/atsScorer.js';
+
+const RESUME_AUTO_CLEAR_MS = 3 * 60 * 1000;
 
 function ScoreBadge({ score }) {
   return (
@@ -27,6 +29,17 @@ export function AtsPage() {
   const [isResumeScanning, setIsResumeScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  useEffect(() => {
+    if (!analysis) return undefined;
+
+    const timerId = setTimeout(() => {
+      setResumeText('');
+      setNotice('Resume text was auto-cleared 3 minutes after ATS score analysis.');
+    }, RESUME_AUTO_CLEAR_MS);
+
+    return () => clearTimeout(timerId);
+  }, [analysis]);
 
   function isImageResume(fileName, mimeType) {
     const lowerName = String(fileName || '').toLowerCase();
@@ -124,6 +137,7 @@ export function AtsPage() {
     try {
       const result = calculateAtsScore(trimmedResume, trimmedJob);
       setAnalysis(result);
+      setNotice('ATS score analyzed. Resume text will auto-clear in 3 minutes.');
     } catch (analysisError) {
       setError(analysisError.message || 'Could not analyze resume right now.');
     } finally {

@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 
 const TABS = [
   { to: '/', label: 'Basic' },
+  { to: '/subjective', label: 'Subjective' },
   { to: '/voice', label: 'Voice' },
   { to: '/camera', label: 'Camera' },
   { to: '/unit', label: 'Units' },

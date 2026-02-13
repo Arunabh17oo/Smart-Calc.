@@ -36,6 +36,12 @@ const TOPIC_FALLBACK = {
     kicker: 'AI Assistant Watch',
     title: 'Latest AI Assistant News',
     subtitle: 'Recent updates in AI assistants, automation, and productivity tools.'
+  },
+  education: {
+    kicker: 'Campus Bulletin',
+    title: 'Education & Entrance News',
+    subtitle:
+      'Latest updates on college admissions, entrance exams, scholarships, and education policy.'
   }
 };
 
@@ -87,6 +93,7 @@ function openStory(url) {
 
 export function TechNewsSection({ topic = 'upcoming-tech' }) {
   const topicKey = normalizeTopicKey(topic);
+  const titleId = `tech-news-title-${topicKey}`;
   const fallbackCopy = TOPIC_FALLBACK[topicKey];
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -212,11 +219,11 @@ export function TechNewsSection({ topic = 'upcoming-tech' }) {
   }
 
   return (
-    <section className="tech-news-panel" aria-labelledby="tech-news-title">
+    <section className="tech-news-panel" aria-labelledby={titleId}>
       <div className="tech-news-head">
         <div>
           <p className="tech-news-kicker">{sectionKicker}</p>
-          <h2 id="tech-news-title">{sectionTitle}</h2>
+          <h2 id={titleId}>{sectionTitle}</h2>
           <p className="tech-news-subtitle">{sectionSubtitle}</p>
         </div>
 

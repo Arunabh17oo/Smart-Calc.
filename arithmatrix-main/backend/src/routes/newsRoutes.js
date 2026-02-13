@@ -56,6 +56,15 @@ const TOPIC_CONFIG = {
     title: 'Latest AI Assistant News',
     subtitle: 'Recent AI assistant, automation, and productivity tool updates.',
     query: '(AI assistant OR agentic AI OR productivity AI tools)'
+  },
+  education: {
+    key: 'education',
+    kicker: 'Campus Bulletin',
+    title: 'Education & Entrance News',
+    subtitle:
+      'Latest updates on college admissions, entrance exams, scholarships, and education policy.',
+    query:
+      '(college admission OR university admission OR entrance exam OR JEE OR NEET OR SAT OR ACT OR scholarship OR education policy)'
   }
 };
 
@@ -201,6 +210,14 @@ function inferCategory(topicKey, title) {
     if (/(agent|copilot|assistant|chatbot)/.test(text)) return 'Assistants';
     if (/(model|llm|ai)/.test(text)) return 'AI Models';
     return 'Automation';
+  }
+
+  if (topicKey === 'education') {
+    if (/(jee|neet|sat|act|cat|gate|exam)/.test(text)) return 'Entrance Exams';
+    if (/(admission|counselling|counseling|application|deadline)/.test(text)) return 'Admissions';
+    if (/(scholarship|fellowship|financial aid)/.test(text)) return 'Scholarships';
+    if (/(college|university|campus)/.test(text)) return 'College Updates';
+    return 'Education';
   }
 
   if (/(robot|automation|humanoid)/.test(text)) return 'Robotics';
