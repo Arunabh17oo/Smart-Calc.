@@ -1,6 +1,6 @@
 # ArithMatrix
 
-ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, unit conversion, world constants sticky notes, currency conversion (including USDT), weather lookup, AI assistant chat, route-aware live news feeds, live market prices, and persistent history.
+ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, unit conversion, world constants sticky notes, currency conversion (including USDT), weather lookup, AI assistant chat, route-aware live news feeds, live market prices, subjective tests, and role-based account management.
 
 This repository contains:
 - `frontend`: React + Vite client
@@ -9,6 +9,25 @@ This repository contains:
 ## Features
 
 - Expression calculator with scientific and advanced modes (trig, logs, powers, constants, factorial, nCr/nPr, gcd/lcm, roots, hyperbolic trig)
+- Account system with:
+  - Email/mobile signup + login
+  - Google sign-in (OAuth/GIS)
+  - Persistent local account/session mapping per login
+  - Periodic login reminder popup for signed-out users (every 4 minutes)
+- Role-based access controls:
+  - `student`, `teacher`, and `admin` roles
+  - Admin tab visibility only for admins
+  - Admin route guarded from non-admin access
+  - Admin panel with latest-signup-first view, role assignment, and user deletion (non-admin accounts only)
+- Subjective Test module:
+  - Teacher can create scheduled subjective forms with marks, timing, instructions, question text, and optional question PDF
+  - Teacher authentication for test management via teacher email + passcode
+  - Teacher can edit created tests and upload answer key
+  - Student joins via join code, registers with name/email, and submits subjective answers
+  - Anti-cheat protections during active test (copy/paste/context menu/shortcut blocking)
+  - Proctor mode support (camera + mic + fullscreen lock checks)
+  - Proctoring evidence upload and optional teacher email dispatch (server-side mail config)
+  - Teacher grading with marks + remarks, and student result retrieval
 - Dedicated Unit Converter tab with grouped conversion categories:
   - Basic units: length, area, volume, time
   - Temperature
@@ -54,15 +73,16 @@ This repository contains:
 - Frontend: React 18, React Router, Vite, Tesseract.js
 - Backend: Node.js, Express, Mongoose, CORS, dotenv
 - Database: MongoDB
-- External data providers: Frankfurter (fiat exchange), CoinGecko (USDT/BTC), Open-Meteo (weather/geocoding), Yahoo Finance (stocks), Google News RSS (news), LibreTranslate/MyMemory (translation)
+- External data providers/services: Frankfurter (fiat exchange), CoinGecko (USDT/BTC), Open-Meteo (weather/geocoding), Yahoo Finance (stocks), Google News RSS (news), LibreTranslate/MyMemory (translation), Google Identity Services (Google sign-in)
 
 ## Project Structure
 
-- `frontend/src/pages`: route pages (`Basic`, `Voice`, `Camera`, `Unit`, `Currency`, `Weather`, `Assistant`, `History`)
-- `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`, `TranslatePopup`)
+- `frontend/src/pages`: route pages (`Basic`, `Subjective`, `Voice`, `Camera`, `Unit`, `Currency`, `ATS`, `Weather`, `Assistant`, `History`, `Admin`)
+- `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`, `TranslatePopup`, `SubjectiveTestPanel`)
+- `frontend/src/admin`: admin role/user management UI
 - `frontend/src/api`: HTTP clients for backend APIs
-- `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`, `news`, `translate`)
-- `backend/src/models`: MongoDB models (`HistoryEntry`)
+- `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`, `news`, `subjective`, `translate`)
+- `backend/src/models`: MongoDB models (`HistoryEntry`, `SubjectiveTest`, `SubjectiveSubmission`)
 
 ## Prerequisites
 
@@ -98,9 +118,22 @@ Frontend (`frontend/.env`):
 
 ```env
 VITE_API_BASE_URL=http://localhost:5001/api
+VITE_GOOGLE_CLIENT_ID=
 ```
 
 If AI keys are empty, the app still runs using local/fallback assistant behavior.
+
+For subjective proctoring email dispatch, backend can use either SMTP or Gmail app password:
+
+```env
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+GMAIL_USER=
+GMAIL_APP_PASSWORD=
+```
 
 ### 3) Run the app
 
@@ -159,6 +192,17 @@ Base URL: `http://localhost:5001/api`
 - `POST /translate`
 - `POST /assistant/chat`
 - `POST /assistant/solve-math`
+- `POST /subjective/tests`
+- `POST /subjective/teachers/login`
+- `GET /subjective/tests/by-code/:joinCode`
+- `POST /subjective/tests/:joinCode/register`
+- `POST /subjective/tests/:joinCode/submit`
+- `POST /subjective/tests/:joinCode/proctoring`
+- `GET /subjective/tests/:joinCode/result?studentEmail=...`
+- `GET /subjective/tests/:testId/manage?teacherPasscode=...`
+- `PATCH /subjective/tests/:testId`
+- `POST /subjective/tests/:testId/answer-key`
+- `PATCH /subjective/submissions/:submissionId/grade`
 
 ## Notes
 
@@ -168,6 +212,13 @@ Base URL: `http://localhost:5001/api`
 - History source values currently stored in MongoDB: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`.
 
 ## Recent Updates
+
+Updated on **February 13, 2026**:
+- Added modern login/signup modal with ArithMatrix branding and Google sign-in integration.
+- Added admin-only navigation visibility and route protection for `/admin`.
+- Added admin account management actions: latest-signup-first sorting, role assignment, and user deletion.
+- Added dynamic nav-tab spacing based on visible tabs (no empty slot when Admin tab is hidden).
+- Added Subjective test workflow enhancements (teacher management, grading, anti-cheat/proctoring flow, student result visibility).
 
 Updated on **February 12, 2026**:
 - ATS Score Checker now auto-clears Resume Text 3 minutes after score analysis completes.

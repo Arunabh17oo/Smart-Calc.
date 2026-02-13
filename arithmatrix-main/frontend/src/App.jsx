@@ -734,9 +734,7 @@ export default function App() {
             >
               <div className="auth-modal-head">
                 <div className="auth-modal-head-brand">
-                  <span className="auth-modal-head-g" aria-hidden="true">
-                    G
-                  </span>
+                  <img className="auth-modal-head-logo" src="/logo.png" alt="" aria-hidden="true" />
                   <p>ArithMatrix Account</p>
                 </div>
                 <button
@@ -983,7 +981,7 @@ export default function App() {
 
       <div className="app-content-stack">
         <main className="app-main">
-          <div className="route-stage" key={location.pathname}>
+          <div id="tool-workspace" className="route-stage" key={location.pathname}>
             <Routes location={location}>
               <Route path="/" element={<BasicPage assistantStorageKey={assistantStorageKey} />} />
               <Route

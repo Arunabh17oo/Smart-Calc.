@@ -19,16 +19,27 @@ function buildTabs(showAdminTab) {
   return TABS.filter((tab) => tab.to !== '/admin');
 }
 
+function scrollToWorkspace() {
+  if (typeof document === 'undefined') return;
+  window.requestAnimationFrame(() => {
+    const workspace = document.getElementById('tool-workspace');
+    if (!workspace) return;
+    workspace.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 export function NavTabs({ showAdminTab = false }) {
   const tabs = buildTabs(showAdminTab);
+  const navStyle = { '--tab-count': String(tabs.length) };
   return (
-    <nav className="tabs" aria-label="Primary navigation">
+    <nav className="tabs" style={navStyle} aria-label="Primary navigation">
       {tabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
           className={({ isActive }) => `tab-link ${isActive ? 'tab-link-active' : ''}`}
           end={tab.to === '/'}
+          onClick={scrollToWorkspace}
         >
           {tab.label}
         </NavLink>
@@ -39,14 +50,16 @@ export function NavTabs({ showAdminTab = false }) {
 
 export function InlineNavTabs({ showAdminTab = false }) {
   const tabs = buildTabs(showAdminTab);
+  const navStyle = { '--tab-count': String(tabs.length) };
   return (
-    <nav className="tabs tabs-inline" aria-label="Primary navigation">
+    <nav className="tabs tabs-inline" style={navStyle} aria-label="Primary navigation">
       {tabs.map((tab) => (
         <NavLink
           key={tab.to}
           to={tab.to}
           className={({ isActive }) => `tab-link ${isActive ? 'tab-link-active' : ''}`}
           end={tab.to === '/'}
+          onClick={scrollToWorkspace}
         >
           {tab.label}
         </NavLink>
