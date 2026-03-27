@@ -1,56 +1,51 @@
-# ArithMatrix
+# ArithMatrix (Smart-Calc)
 
-ArithMatrix is a full-stack web app that combines a smart calculator with voice input, camera OCR solving, currency conversion (including USDT), weather lookup, AI assistant chat, route-aware live news feeds, live market prices, and persistent history.
+ArithMatrix is a full-stack web application combining a smart scientific calculator with voice input, camera OCR math solving, currency conversion (USDT/fiat), weather lookup, AI assistant chat, live market data, live news feeds, and persistent operation history.
 
-This repository contains:
-- `frontend`: React + Vite client
-- `backend`: Express + MongoDB API server
+## 🚀 Key Features
 
-## Features
+- Smart expression calculator: scientific and advanced (trig, log, exp, factorial, combinations/permutations, gcd/lcm, roots, hyperbolic functions, constants, unit conversions)
+- Voice calculator: speech recognition with optional text-to-speech
+- Camera math solver: Tesseract.js OCR + AI reasoning pipeline
+- Currency converter: fiat ↔︎ USDT plus cross pairs, live rates
+- Weather lookup: current conditions + 5-day forecast
+- AI assistant: chat, math solving, contextual help
+- Live market panel: top stock quotes, BTC/USDT/USD/INR cards, auto/manual refresh, marquee ticker
+- Persistent history (MongoDB): categories `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
+- Route-aware news feeds per tool tab for context-driven content
 
-- Expression calculator with scientific and advanced modes (trig, logs, powers, constants, factorial, nCr/nPr, gcd/lcm, roots, hyperbolic trig)
-- Voice calculator using browser SpeechRecognition and optional TTS
-- Camera math solver using Tesseract OCR + assistant-based step solution
-- Currency converter with live rates and USDT support (`USDT -> USD`, `USDT -> INR`, and reverse/cross pairs)
-- Weather search with current stats and 5-day forecast
-- AI assistant for math, currency, weather, and app help
-- Live market strip with top 10 popular stock quotes, BTC/USDT/USD/INR cards, manual refresh, auto refresh, and smooth marquee ticker
-- History storage in MongoDB by source: `BASIC`, `VOICE`, `CAMERA`, `CURRENCY`
-- Translation operations panel with top-bar jump button
-- Route-aware live news section shown below the active tool panel on every tab:
-  - `/` -> Upcoming technologies
-  - `/voice` -> Mobile phones and electronics
-  - `/camera` -> Camera and imaging
-  - `/currency` -> Currency and forex
-  - `/weather` -> Weather events
-  - `/history` -> Overall world news
-  - `/assistant` -> AI assistant updates
-- News caching and refresh flow:
-  - Backend refreshes each topic feed every 2 hours
-  - Frontend auto-refreshes based on server refresh interval and supports manual refresh
+## 🧩 Tech Stack
 
-## Tech Stack
-
-- Frontend: React 18, React Router, Vite, Tesseract.js
+- Frontend: React 18, Vite, React Router, Tesseract.js, modern hooks/components
 - Backend: Node.js, Express, Mongoose, CORS, dotenv
-- Database: MongoDB
-- External data providers: Frankfurter (fiat exchange), CoinGecko (USDT/BTC), Open-Meteo (weather/geocoding), Yahoo Finance (stocks), Google News RSS (news), LibreTranslate/MyMemory (translation)
+- Database: MongoDB (local or Atlas)
+- External integrations:
+  - Frankfurter (fiat conversion)
+  - CoinGecko (crypto rates)
+  - Open-Meteo (weather + geocoding)
+  - Yahoo Finance (stock quotes)
+  - Google News RSS (topic news)
+  - LibreTranslate / MyMemory (translations)
+  - Optional OpenAI / Hugging Face (assistant fallback)
 
-## Project Structure
+## 📁 Repository Structure
 
-- `frontend/src/pages`: route pages (`Basic`, `Voice`, `Camera`, `Currency`, `Weather`, `Assistant`, `History`)
-- `frontend/src/components`: reusable UI (`NavTabs`, `AssistantWidget`, `MarketPulseBar`, `TechNewsSection`, `TranslatePopup`)
-- `frontend/src/api`: HTTP clients for backend APIs
-- `backend/src/routes`: API routes (`health`, `history`, `currency`, `weather`, `assistant`, `market`, `news`, `translate`)
-- `backend/src/models`: MongoDB models (`HistoryEntry`)
+- `frontend/`: React app
+  - `src/pages/`: route pages (Basic, Voice, Camera, Currency, Weather, Assistant, History, Admin)
+  - `src/components/`: shared UI
+  - `src/api/`: API clients
+- `backend/`: Express API server
+  - `src/routes/`: route modules (currency, weather, market, news, history, assistant, translate, health)
+  - `src/models/`: Mongoose models
+  - `src/config/`: DB configuration
 
-## Prerequisites
+## 🛠️ Prerequisites
 
-- Node.js 18 or newer
+- Node.js 18+
 - npm
-- MongoDB (local or Atlas URI)
+- MongoDB (local instance or Atlas URI)
 
-## Setup
+## ⚙️ Setup
 
 ### 1) Install dependencies
 
@@ -59,70 +54,69 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 2) Configure environment
+### 2) Configure environment variables
 
-Backend (`backend/.env`):
+#### Backend (`backend/.env`)
 
 ```env
 PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/arithmatrix
 CLIENT_ORIGIN=http://localhost:5173
 
+# Optional AI keys
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 HUGGINGFACE_API_KEY=
 HUGGINGFACE_MODEL=HuggingFaceTB/SmolLM3-3B:hf-inference
 ```
 
-Frontend (`frontend/.env`):
+#### Frontend (`frontend/.env`)
 
 ```env
 VITE_API_BASE_URL=http://localhost:5001/api
 ```
 
-If AI keys are empty, the app still runs using local/fallback assistant behavior.
+> If AI keys are missing, the app will run with local/fallback assistant behavior.
 
-### 3) Run the app
+### 3) Start local development
 
-Terminal 1:
+Terminal 1 (backend):
 
 ```bash
 cd backend
 npm run dev
 ```
 
-Terminal 2:
+Terminal 2 (frontend):
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+Open `http://localhost:5173`
 
-## Build
+## 🧪 Run tests (if available)
 
-Frontend production build:
+- No test suite is baked in by default. Add unit/integration tests in `frontend/src` and `backend/src` as needed.
+
+## 🏗️ Production build
 
 ```bash
 cd frontend
 npm run build
-```
 
-Backend production start:
-
-```bash
-cd backend
+cd ../backend
 npm start
 ```
 
-## API Overview
+## 🌐 API Endpoints
 
 Base URL: `http://localhost:5001/api`
 
 - `GET /health`
 - `GET /history?source=BASIC|VOICE|CAMERA|CURRENCY`
-- `POST /history`
+- `POST /history` (save entry)
 - `DELETE /history/:id`
 - `DELETE /history?source=...`
 - `GET /currency/supported`
@@ -135,12 +129,19 @@ Base URL: `http://localhost:5001/api`
 - `POST /assistant/chat`
 - `POST /assistant/solve-math`
 
-## Notes
+## 🔍 Notes
 
 - Voice and camera features require secure context (`https`) or `localhost`.
-- Market, news, translation, weather, and currency data depend on third-party APIs and may be rate-limited.
-- Stock logos are fetched from Clearbit logo URLs and may fallback to emoji badges.
+- Third-party provider limits may affect market, news, translation, weather, and currency data.
+- Stock logos are fetched via Clearbit and may fall back to emoji badges.
 
-## License
+## 📝 Optional enhancements
 
-Private/internal project unless you choose to add a license file.
+- Add user authentication (JWT / sessions)
+- Persist user preferences in DB
+- Add admin role toggles and panel gating
+- Add UI for offline mode and rate-limit warnings
+
+## 📜 License
+
+Private/internal project by default. Add a license file if open-source release is desired.
